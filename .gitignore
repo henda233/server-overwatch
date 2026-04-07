@@ -1,0 +1,5 @@
+.venv/
+.kimi/
+botpy/
+config.yaml
+AGENTS.md
