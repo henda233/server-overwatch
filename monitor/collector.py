@@ -6,6 +6,7 @@
 import subprocess
 import re
 from typing import Dict, List
+from collections import defaultdict
 
 
 class Collector:
@@ -19,7 +20,7 @@ class Collector:
     """
     
     def collect(self) -> Dict[str, Dict]:
-        """采集所有在线用户的资源使用情况
+        """采集所有在线用户的资源使用情况（按用户区分GPU数据）
         
         Returns:
             Dict[用户名, Dict[资源数据]]
@@ -37,24 +38,43 @@ class Collector:
         # 获取在线用户
         users = self.collect_users()
         
-        # 采集系统资源
-        gpu_data = self.collect_gpu()
+        # 获取 PID → 用户名 映射
+        pid_to_user = self.get_pid_username_map()
+        
+        # 获取每个计算进程的GPU使用情况
+        processes = self.collect_process_gpu()
+        
+        # 按用户聚合GPU数据
+        user_gpu = defaultdict(lambda: {"gpu_percent": 0, "gpu_memory_mb": 0})
+        
+        for proc in processes:
+            username = pid_to_user.get(proc["pid"])
+            if username and username in users:
+                user_gpu[username]["gpu_percent"] += proc["gpu_percent"]
+                user_gpu[username]["gpu_memory_mb"] += proc["memory_mb"]
+        
+        # 获取GPU总显存（用于显示）
+        gpu_total_memory = self._get_gpu_total_memory()
+        
+        # 获取系统级CPU/内存数据
         memory_data = self.collect_memory()
         cpu_data = self.collect_cpu()
         
-        # 构建用户资源映射（简化版：所有用户共享系统资源）
+        # 构建用户资源映射（GPU按用户区分，CPU/内存为系统级）
         result = {}
         for user in users:
+            gpu_data = user_gpu.get(user, {"gpu_percent": 0, "gpu_memory_mb": 0})
             result[user] = {
-                "gpu_percent": gpu_data.get("utilization", 0),
-                "gpu_memory_mb": gpu_data.get("memory_used_mb", 0),
-                "gpu_memory_total_mb": gpu_data.get("memory_total_mb", 0),
+                "gpu_percent": min(gpu_data["gpu_percent"], 100),  # 防止超过100%
+                "gpu_memory_mb": gpu_data["gpu_memory_mb"],
+                "gpu_memory_total_mb": gpu_total_memory,
                 "cpu_percent": cpu_data.get("percent", 0),
                 "memory_percent": memory_data.get("percent", 0)
             }
         
         # 如果没有用户，至少返回系统总体情况
         if not result:
+            gpu_data = self.collect_gpu()
             result["system"] = {
                 "gpu_percent": gpu_data.get("utilization", 0),
                 "gpu_memory_mb": gpu_data.get("memory_used_mb", 0),
@@ -65,8 +85,91 @@ class Collector:
         
         return result
     
+    def collect_process_gpu(self) -> List[Dict]:
+        """采集每个计算进程的GPU使用情况
+        
+        通过 nvidia-smi --query-compute-apps 获取正在使用GPU的进程信息。
+        
+        Returns:
+            List[Dict], 每个进程包含:
+                - pid: int, 进程ID
+                - memory_mb: int, 使用的显存 (MB)
+                - gpu_percent: int, GPU使用率
+        """
+        result = []
+        
+        try:
+            cmd = [
+                "nvidia-smi",
+                "--query-compute-apps=pid,used_memory,utilization.gpu",
+                "--format=csv,noheader,nounits"
+            ]
+            output = subprocess.check_output(cmd, text=True, timeout=5)
+            
+            for line in output.strip().split("\n"):
+                if line:
+                    parts = [p.strip() for p in line.split(",")]
+                    if len(parts) >= 3:
+                        result.append({
+                            "pid": int(parts[0]),
+                            "memory_mb": int(parts[1]),
+                            "gpu_percent": int(parts[2])
+                        })
+        except (subprocess.CalledProcessError, ValueError, subprocess.TimeoutExpired):
+            pass
+        
+        return result
+    
+    def get_pid_username_map(self) -> Dict[int, str]:
+        """获取 PID → 用户名 的映射
+        
+        通过 ps aux 获取所有进程的PID和用户名。
+        
+        Returns:
+            Dict[pid, username]
+        """
+        pid_to_user = {}
+        
+        try:
+            output = subprocess.check_output(
+                ["ps", "aux"],
+                text=True,
+                timeout=5
+            )
+            
+            for line in output.strip().split("\n"):
+                # 跳过表头行（第一行是 USER PID %CPU %MEM ...）
+                if line.startswith("USER") or not line.strip():
+                    continue
+                parts = line.split()
+                if len(parts) >= 11:  # ps aux 格式: USER PID %CPU %MEM ...
+                    username = parts[0]
+                    pid = int(parts[1])
+                    pid_to_user[pid] = username
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            pass
+        
+        return pid_to_user
+    
+    def _get_gpu_total_memory(self) -> int:
+        """获取GPU总显存
+        
+        Returns:
+            总显存 (MB)，获取失败返回 0
+        """
+        try:
+            cmd = [
+                "nvidia-smi",
+                "--query-gpu=memory.total",
+                "--format=csv,noheader,nounits"
+            ]
+            output = subprocess.check_output(cmd, text=True, timeout=5)
+            return int(output.strip())
+        except (subprocess.CalledProcessError, ValueError, subprocess.TimeoutExpired):
+            return 0
+    
     def collect_gpu(self) -> Dict:
-        """采集GPU信息
+        """采集GPU信息（系统级，作为备用）
         
         使用 nvidia-smi 获取 GPU 使用率和显存信息。
         
