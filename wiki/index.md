@@ -22,7 +22,8 @@
 | PLAN-002 | 开发流程 | v2.0 | ✅ 完成 | [🔗](./plan/02-development-flow.md) |
 | PLAN-003 | 模块详细设计 | v2.0 | ✅ 完成 | [🔗](./plan/03-module-design.md) |
 | PLAN-004 | QQ机器人命令设计 | v2.0 | ✅ 完成 | [🔗](./plan/04-command-design.md) |
-| PLAN-005 | 用户资源区分修复 | v1.0 | ⏳ 待执行 | [🔗](./plan/05-user-resource-fix.md) |
+| PLAN-005 | 用户资源区分修复 | v1.0 | ✅ 完成 | [🔗](./plan/05-user-resource-fix.md) |
+| PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ⏳ 待执行 | [🔗](./plan/06-who-missing-process-user-fix.md) |
 
 ## 🚨 开发待办
 
@@ -50,12 +51,22 @@
 - [ ] 服务器测试
 
 ### 阶段5: 用户资源区分修复
-- [ ] 修改 collector.py，按用户聚合GPU数据
-- [ ] 本地测试验证
+- [x] 修改 collector.py，按用户聚合GPU数据
+- [x] 本地测试验证
+- [ ] 部署到GPU服务器
+
+### 阶段6: nvidia-smi字段解析Bug修复
+- [ ] 修正 collector.py 字段检查 `len >= 2`
+- [ ] 处理GPU使用率获取
 - [ ] 部署到GPU服务器
 
 ## 📝 全局更新日志（近10条）
 
+- `04-07 21:25`: 🐛 **PLAN-006 根因修正**
+  - 问题：lgl登录正常，`who`检测正常，但显存仍显示0GB
+  - **实际根因**：`nvidia-smi --query-compute-apps`返回2字段，代码期望3字段
+  - 更新 `wiki/plan/06-who-missing-process-user-fix.md` v2.0
+  - 修复方案：修正字段数量检查 `len >= 2`
 - `04-07 18:10`: 📋 **修复计划已制定**
   - 创建 `wiki/plan/05-user-resource-fix.md`
   - 方案：进程级GPU采集 + PID用户名映射

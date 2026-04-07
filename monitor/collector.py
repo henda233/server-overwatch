@@ -99,9 +99,11 @@ class Collector:
         result = []
         
         try:
+            # 注意：--query-compute-apps 只支持 pid,used_memory 两个字段
+            # utilization.gpu 字段对计算进程无效，会导致解析失败
             cmd = [
                 "nvidia-smi",
-                "--query-compute-apps=pid,used_memory,utilization.gpu",
+                "--query-compute-apps=pid,used_memory",
                 "--format=csv,noheader,nounits"
             ]
             output = subprocess.check_output(cmd, text=True, timeout=5)
@@ -109,11 +111,12 @@ class Collector:
             for line in output.strip().split("\n"):
                 if line:
                     parts = [p.strip() for p in line.split(",")]
-                    if len(parts) >= 3:
+                    # 修复：nvidia-smi --query-compute-apps 只返回 2 个字段 (pid, used_memory)
+                    if len(parts) >= 2:
                         result.append({
                             "pid": int(parts[0]),
                             "memory_mb": int(parts[1]),
-                            "gpu_percent": int(parts[2])
+                            "gpu_percent": 0  # 进程级GPU使用率暂不支持，设为0
                         })
         except (subprocess.CalledProcessError, ValueError, subprocess.TimeoutExpired):
             pass
