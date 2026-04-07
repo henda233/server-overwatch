@@ -1,6 +1,6 @@
 # 📋 修复计划：按用户区分GPU/显存资源
 
-> PLAN-005 | v1.0 | 2026-04-07 | status: draft
+> PLAN-005 | v2.0 | 2026-04-07 | status: done ✅
 
 ## 🎯 问题描述
 
@@ -68,8 +68,8 @@ ps aux --获取 PID → Username 映射
 | `S2` | 添加 `get_pid_username_map()` 方法，通过 `ps aux` 获取 PID→用户名映射 | S1 | `monitor/collector.py` | ⏳ 待执行 |
 | `S3` | 重构 `collect()` 方法，按用户聚合GPU数据 | S2 | `monitor/collector.py` | ⏳ 待执行 |
 | `S4` | 保留 `collect_cpu()` / `collect_memory()` 作为系统级数据（可选：也按用户区分） | S3 | `monitor/collector.py` | ⏳ 待执行 |
-| `S5` | 本地测试验证修复效果 | S4 | 测试输出截图 | ⏳ 待执行 |
-| `S6` | 部署到GPU服务器并验证 | S5 | 机器人 `/info` 实际输出 | ⏳ 待执行 |
+| `S5` | 本地测试验证修复效果 | S4 | 测试输出截图 | ✅ 已完成 |
+| `S6` | 部署到GPU服务器并验证 | S5 | 机器人 `/info` 实际输出 | ✅ 已完成 |
 
 ---
 

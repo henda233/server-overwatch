@@ -1,18 +1,19 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-07 20:36 | 🤖 维护Agent：v2.3 | 📦 总摘要数：7 + 计划文档8份 + 部署文档1份
+> 🔄 最后同步：2026-04-07 20:36 | 🤖 维护Agent：v2.5 | 📦 总摘要数：8 + 计划文档8份 + 部署文档1份
 
 ## 📊 模块总览
 
-| 摘要ID | 所属模块/类别 | 核心摘要链接 | 关键状态/结论 | 最后更新 |
+| 摘要ID | 所属模块/类别 | 核心摘要链接 | 内容 | 最后更新 |
 |--------|--------------|-------------|--------------|---------|
-| `abs_001` | `project/overview` | [🔗](./abstract/project/overview.md) | ✅ Server Only架构 | 04-07 |
-| `abs_002` | `tech/botpy` | [🔗](./abstract/tech/botpy.md) | SDK已集成 | 04-07 |
+| `abs_001` | `project/overview` | [🔗](./abstract/project/overview.md) | 项目概述+目录结构 | 04-07 |
+| `abs_002` | `tech/botpy` | [🔗](./abstract/tech/botpy.md) | QQ机器人SDK，事件监听机制 | 04-07 |
 | `abs_003` | `config/qq_bot` | [🔗](./abstract/config/qq_bot.md) | 配置模板已就绪 | 04-07 |
 | `abs_004` | `server/gpu_info` | [🔗](./abstract/server/gpu_info.md) | 服务器环境信息 | 04-07 |
-| `abs_005` | `requirement/core` | [🔗](./abstract/requirement/core.md) | ✅ Server Only架构 | 04-07 |
+| `abs_005` | `requirement/core` | [🔗](./abstract/requirement/core.md) | 功能需求+命令设计+按用户资源区分 | 04-07 |
 | `abs_phase1` | `dev_progress/phase1` | [🔗](./abstract/dev_progress/phase1-complete.md) | ✅ 阶段1完成 | 04-07 |
 | `abs_phase2` | `dev_progress/botpy-intents` | [🔗](./abstract/dev_progress/botpy-intents-fix.md) | ✅ intents配置修复 + 私聊支持 | 04-07 |
+| `abs_006` | `config/env` | [🔗](./abstract/config/env.md) | 开发环境配置 | 04-07 |
 
 ## 📐 开发计划文档
 
@@ -25,7 +26,7 @@
 | PLAN-005 | 用户资源区分修复 | v1.0 | ✅ 完成 | [🔗](./plan/05-user-resource-fix.md) |
 | PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ✅ 完成 | [🔗](./plan/06-who-missing-process-user-fix.md) |
 | PLAN-007 | 按用户区分CPU/内存/GPU使用率 | v1.0 | ✅ 已完成 | [🔗](./plan/07-user-cpu-memory-gpu-percent-fix.md) |
-| PLAN-008 | GPU使用率和显存显示小数 | v1.0 | 📋 待执行 | [🔗](./plan/08-gpu-memory-decimal-fix.md) |
+| PLAN-008 | GPU使用率和显存显示小数 | v1.0 | ✅ 完成 | [🔗](./plan/08-gpu-memory-decimal-fix.md) |
 
 ## 🚨 开发待办
 
@@ -49,18 +50,18 @@
 - [x] 历史查询 (`/info 1d/1w/1m`) ✅ 已在 handler.py 实现
 
 ### 阶段4: 部署
-- [x] systemd 服务配置 ✅ 已完成
+- [ ] systemd 服务配置
 - [ ] 服务器测试
 
 ### 阶段5: 用户资源区分修复
 - [x] 修改 collector.py，按用户聚合GPU数据
 - [x] 本地测试验证
-- [ ] 部署到GPU服务器
+- [x] 部署到GPU服务器 ✅ 验证通过
 
 ### 阶段6: nvidia-smi字段解析Bug修复
 - [x] 修正 collector.py 字段检查 `len >= 2`
 - [x] 处理GPU使用率获取（设为0）
-- [x] 部署到GPU服务器
+- [x] 部署到GPU服务器 ✅ 验证通过
 
 ### 阶段7: 按用户区分CPU/内存/GPU使用率
 - [x] 重构 `get_pid_username_map()` 为 `get_process_info()`
@@ -70,6 +71,12 @@
 
 ## 📝 全局更新日志（近10条）
 
+- `04-07 20:36`: 🔧 **WIKI一致性修复** - 修正摘要数量、状态标记、待办事项
+- `04-07 20:36`: ✅ **PLAN-008 修复完成：GPU使用率和显存显示小数**
+  - `collector.py` 第79行：`int()` → `round(..., 2)` 保留2位小数
+  - `formatter.py`：GPU显示 `{gpu:>6.2f}%`，显存 `{used_gb:.2f}GB/{total_gb:.2f}GB`
+  - CPU/内存显示1位小数：`{cpu:.1f}%`、`{mem:.1f}%`
+  - GPU服务器验证通过：GPU 51.85%，显存 7.65GB/95.59GB
 - `04-07 20:36`: 📋 **PLAN-008 创建：GPU使用率和显存显示小数**
   - 问题：GPU使用率和显存显示为整数，不够精确
   - 方案：`collector.py` 使用 `round()` 保留2位小数，`formatter.py` 调整显示格式
