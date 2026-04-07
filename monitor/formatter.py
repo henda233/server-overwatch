@@ -30,7 +30,7 @@ class Formatter:
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         # 表头
-        header = "用户名   | GPU   | 显存       | CPU   | 内存"
+        header = "用户名   | GPU      | 显存              | CPU    | 内存"
         lines.append(header)
         lines.append("-" * len(header))
         
@@ -48,7 +48,7 @@ class Formatter:
             else:
                 mem_str = f"{gpu_mem}MB"
             
-            line = f"{username[:7]:<7} | {gpu:>3}%  | {mem_str:<10} | {cpu:>3}%  | {mem}%"
+            line = f"{username[:7]:<7} | {gpu:>6.2f}% | {mem_str:<17} | {cpu:>6.1f}%  | {mem:>5.1f}%"
             lines.append(line)
         
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -86,7 +86,7 @@ class Formatter:
             gpu_mem_mb = record.get("gpu_memory_mb", 0)
             gpu_mem_gb = gpu_mem_mb / 1024 if gpu_mem_mb else 0
             
-            line = f"{username:<7} | {timestamp:<18} | {gpu:>3}%  | {gpu_mem_gb:.1f}GB"
+            line = f"{username:<7} | {timestamp:<18} | {gpu:>6.2f}% | {gpu_mem_gb:.2f}GB"
             lines.append(line)
         
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -113,17 +113,17 @@ class Formatter:
         lines = []
         lines.append(f"👤 {username} 当前状态")
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"GPU使用率: {gpu}%")
+        lines.append(f"GPU使用率: {gpu:.2f}%")
         
         if gpu_mem_total > 0:
             gpu_mem_gb = gpu_mem_mb / 1024
             total_gb = gpu_mem_total / 1024
-            lines.append(f"显存使用: {gpu_mem_gb:.1f}GB / {total_gb:.1f}GB")
+            lines.append(f"显存使用: {gpu_mem_gb:.2f}GB / {total_gb:.2f}GB")
         else:
             lines.append(f"显存使用: {gpu_mem_mb}MB")
         
-        lines.append(f"CPU使用率: {cpu}%")
-        lines.append(f"内存使用: {mem}%")
+        lines.append(f"CPU使用率: {cpu:.1f}%")
+        lines.append(f"内存使用: {mem:.1f}%")
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         return "\n".join(lines)
@@ -176,6 +176,6 @@ class Formatter:
         total_gb = total_mb / 1024 if total_mb else 0
         
         if total_gb > 0:
-            return f"{used_gb:.0f}GB/{total_gb:.0f}GB"
+            return f"{used_gb:.2f}GB/{total_gb:.2f}GB"
         else:
             return f"{used_mb}MB"

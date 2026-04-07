@@ -76,7 +76,7 @@ class Collector:
             
             # 按显存比例分配GPU使用率
             if global_mem_used > 0:
-                gpu_percent = int(global_gpu_usage * user_mem / global_mem_used)
+                gpu_percent = round(global_gpu_usage * user_mem / global_mem_used, 2)
             else:
                 gpu_percent = 0
             

@@ -1,6 +1,6 @@
 # 📋 修复计划：按用户区分CPU/内存/GPU使用率
 
-> PLAN-007 | v1.0 | 2026-04-07 | status: draft
+> PLAN-007 | v1.0 | 2026-04-07 | status: done ✅
 
 ## 🎯 问题描述
 
@@ -74,10 +74,10 @@ USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
 | 步骤ID | 任务描述 | 前置依赖 | 交付物/修改路径 | 状态 |
 |--------|---------|---------|----------------|------|
 | `S1` | 分析 ps aux 数据结构 | 无 | 字段解析 | ✅ 已完成 |
-| `S2` | 修改 `get_pid_username_map()` 为 `get_process_info()` | S1 | `monitor/collector.py` | ⏳ 待执行 |
-| `S3` | 实现按用户聚合 CPU/内存 | S2 | `monitor/collector.py` | ⏳ 待执行 |
-| `S4` | 实现按显存比例分配 GPU 使用率 | S2 | `monitor/collector.py` | ⏳ 待执行 |
-| `S5` | 本地测试验证 | S3+S4 | 测试输出 | ⏳ 待执行 |
+| `S2` | 修改 `get_pid_username_map()` 为 `get_process_info()` | S1 | `monitor/collector.py` | ✅ 已完成 |
+| `S3` | 实现按用户聚合 CPU/内存 | S2 | `monitor/collector.py` | ✅ 已完成 |
+| `S4` | 实现按显存比例分配 GPU 使用率 | S2 | `monitor/collector.py` | ✅ 已完成 |
+| `S5` | GPU服务器测试验证 | S3+S4 | 测试输出 | ✅ 已完成 |
 
 ---
 

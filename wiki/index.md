@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-07 20:45 | 🤖 维护Agent：v2.2 | 📦 总摘要数：7 + 计划文档5份 + 部署文档1份
+> 🔄 最后同步：2026-04-07 20:36 | 🤖 维护Agent：v2.3 | 📦 总摘要数：7 + 计划文档8份 + 部署文档1份
 
 ## 📊 模块总览
 
@@ -24,7 +24,8 @@
 | PLAN-004 | QQ机器人命令设计 | v2.0 | ✅ 完成 | [🔗](./plan/04-command-design.md) |
 | PLAN-005 | 用户资源区分修复 | v1.0 | ✅ 完成 | [🔗](./plan/05-user-resource-fix.md) |
 | PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ✅ 完成 | [🔗](./plan/06-who-missing-process-user-fix.md) |
-| PLAN-007 | 按用户区分CPU/内存/GPU使用率 | v1.0 | ⏳ 待执行 | [🔗](./plan/07-user-cpu-memory-gpu-percent-fix.md) |
+| PLAN-007 | 按用户区分CPU/内存/GPU使用率 | v1.0 | ✅ 已完成 | [🔗](./plan/07-user-cpu-memory-gpu-percent-fix.md) |
+| PLAN-008 | GPU使用率和显存显示小数 | v1.0 | 📋 待执行 | [🔗](./plan/08-gpu-memory-decimal-fix.md) |
 
 ## 🚨 开发待办
 
@@ -62,13 +63,25 @@
 - [x] 部署到GPU服务器
 
 ### 阶段7: 按用户区分CPU/内存/GPU使用率
-- [ ] 重构 `get_pid_username_map()` 为 `get_process_info()`
-- [ ] 实现按用户聚合 CPU/内存
-- [ ] 实现按显存比例分配 GPU 使用率
-- [ ] 部署到GPU服务器
+- [x] 重构 `get_pid_username_map()` 为 `get_process_info()`
+- [x] 实现按用户聚合 CPU/内存
+- [x] 实现按显存比例分配 GPU 使用率
+- [x] 部署到GPU服务器 ✅ 验证通过
 
 ## 📝 全局更新日志（近10条）
 
+- `04-07 20:36`: 📋 **PLAN-008 创建：GPU使用率和显存显示小数**
+  - 问题：GPU使用率和显存显示为整数，不够精确
+  - 方案：`collector.py` 使用 `round()` 保留2位小数，`formatter.py` 调整显示格式
+  - 创建 `wiki/plan/08-gpu-memory-decimal-fix.md`
+- `04-07 20:36`: ✅ **问题分析：GPU使用率为0**
+  - 根因：全局GPU使用率接近0，按显存比例分配后仍为0
+  - 方案：调整为小数显示，让用户看到精确值
+- `04-07 20:36`: ✅ **PLAN-007 修复完成**
+  - 重构 `get_pid_username_map()` → `get_process_info()`
+  - 按进程聚合 CPU/内存（累计值，可超过100%）
+  - 按显存比例分配 GPU 使用率
+  - GPU服务器验证：cxy(CPU 11.3%, MEM 4.6%), lgl(CPU 891%, MEM 1.5%, GPU 37%)
 - `04-07 20:45`: 📋 **PLAN-007 创建：按用户区分CPU/内存/GPU使用率**
   - 问题：GPU使用率显示0，CPU/内存所有用户相同
   - 根因：`nvidia-smi --query-compute-apps`不支持GPU使用率，CPU/内存为系统级数据
