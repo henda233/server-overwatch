@@ -3,3 +3,5 @@
 botpy/
 config.yaml
 AGENTS.md
+history.db
+__pycache__/

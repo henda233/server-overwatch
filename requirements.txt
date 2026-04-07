@@ -1,0 +1,3 @@
+# Server Overwatch 依赖
+qq-botpy>=2.0.0
+pyyaml>=6.0
