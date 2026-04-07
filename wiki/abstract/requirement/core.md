@@ -7,7 +7,7 @@ dependencies:
   - "abs_002"
   - "abs_004"
 created_at: 2026-04-07 16:07:00
-updated_at: 2026-04-07 16:07:00
+updated_at: 2026-04-07 20:45:00
 audit_status: approved
 ---
 
@@ -25,6 +25,8 @@ audit_status: approved
 | R4 | 数据格式化返回 | P1 | ✅ 已设计 |
 | R5 | SQLite历史存储 | P1 | ✅ 已设计 |
 | R6 | 30天自动清理 | P2 | ✅ 已设计 |
+| R7 | 按用户区分GPU使用率（显存比例分配） | P0 | 🔄 进行中 |
+| R8 | 按用户区分CPU/内存（进程聚合） | P0 | 🔄 进行中 |
 
 ### 架构设计
 
@@ -61,3 +63,5 @@ audit_status: approved
 ## 🛡️ 审计记录（User Only）
 
 - [x] 2026-04-07: 需求已确认，架构已更新为 Server Only
+- [x] 2026-04-07: PLAN-006 完成，显存显示正常
+- [x] 2026-04-07: PLAN-007 进行中，按用户区分GPU/CPU/内存使用率

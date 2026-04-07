@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-07 16:08 | 🤖 维护Agent：v2.1 | 📦 总摘要数：7 + 计划文档4份 + 部署文档1份
+> 🔄 最后同步：2026-04-07 20:45 | 🤖 维护Agent：v2.2 | 📦 总摘要数：7 + 计划文档5份 + 部署文档1份
 
 ## 📊 模块总览
 
@@ -23,7 +23,8 @@
 | PLAN-003 | 模块详细设计 | v2.0 | ✅ 完成 | [🔗](./plan/03-module-design.md) |
 | PLAN-004 | QQ机器人命令设计 | v2.0 | ✅ 完成 | [🔗](./plan/04-command-design.md) |
 | PLAN-005 | 用户资源区分修复 | v1.0 | ✅ 完成 | [🔗](./plan/05-user-resource-fix.md) |
-| PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ⏳ 待执行 | [🔗](./plan/06-who-missing-process-user-fix.md) |
+| PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ✅ 完成 | [🔗](./plan/06-who-missing-process-user-fix.md) |
+| PLAN-007 | 按用户区分CPU/内存/GPU使用率 | v1.0 | ⏳ 待执行 | [🔗](./plan/07-user-cpu-memory-gpu-percent-fix.md) |
 
 ## 🚨 开发待办
 
@@ -56,12 +57,29 @@
 - [ ] 部署到GPU服务器
 
 ### 阶段6: nvidia-smi字段解析Bug修复
-- [ ] 修正 collector.py 字段检查 `len >= 2`
-- [ ] 处理GPU使用率获取
+- [x] 修正 collector.py 字段检查 `len >= 2`
+- [x] 处理GPU使用率获取（设为0）
+- [x] 部署到GPU服务器
+
+### 阶段7: 按用户区分CPU/内存/GPU使用率
+- [ ] 重构 `get_pid_username_map()` 为 `get_process_info()`
+- [ ] 实现按用户聚合 CPU/内存
+- [ ] 实现按显存比例分配 GPU 使用率
 - [ ] 部署到GPU服务器
 
 ## 📝 全局更新日志（近10条）
 
+- `04-07 20:45`: 📋 **PLAN-007 创建：按用户区分CPU/内存/GPU使用率**
+  - 问题：GPU使用率显示0，CPU/内存所有用户相同
+  - 根因：`nvidia-smi --query-compute-apps`不支持GPU使用率，CPU/内存为系统级数据
+  - 方案：按显存比例分配GPU使用率 + 按进程聚合CPU/内存
+  - 创建 `wiki/plan/07-user-cpu-memory-gpu-percent-fix.md`
+- `04-07 21:30`: ✅ **PLAN-006 修复完成**
+  - 修改 `monitor/collector.py` 第102-120行
+  - 查询字段改为 `pid,used_memory`
+  - 字段检查改为 `len >= 2`
+  - GPU使用率暂设为0
+  - 用户在GPU服务器验证：显存显示正确
 - `04-07 21:25`: 🐛 **PLAN-006 根因修正**
   - 问题：lgl登录正常，`who`检测正常，但显存仍显示0GB
   - **实际根因**：`nvidia-smi --query-compute-apps`返回2字段，代码期望3字段
