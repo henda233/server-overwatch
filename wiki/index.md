@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-08 20:40 | 🤖 维护Agent：v2.8 | 📦 总摘要数：12 + 计划文档13份
+> 🔄 最后同步：2026-04-08 20:40 | 🤖 维护Agent：v2.8 | 📦 总摘要数：12 + 计划文档14份
 
 ## 📊 模块总览
 
@@ -31,7 +31,7 @@
 | PLAN-011 | 阶段4: 服务器部署 | ✅ 完成 | [🔗](./plan/11-phase4-deployment.md) |
 | PLAN-012 | 历史查询过滤条件修复 | ✅ 完成 | [🔗](./plan/12-history-filter-fix.md) |
 | PLAN-013 | 日志系统添加 | ✅ 完成 | [🔗](./plan/13-logging-system-plan.md) |
-| PLAN-014 | 历史查询翻页功能 | ⏳ 待执行 | [🔗](./plan/14-pagination-feature-plan.md) |
+| PLAN-014 | 历史查询翻页功能 | ✅ 完成 | [🔗](./plan/14-pagination-feature-plan.md) |
 
 ## ✅ 开发待办（状态汇总）
 
@@ -46,6 +46,11 @@
 
 ## 📝 全局更新日志（近10条）
 
+- `04-08 20:40`: ✅ **PLAN-014完成：历史查询翻页功能**
+  - 新增 `/info 5d [页码]` 等翻页命令支持
+  - 每页10条记录，可配置
+  - 页码超界自动归位最后一页
+  - 测试脚本：`test_pagination.py`
 - `04-08 20:40`: 📋 **新增需求+计划：历史查询翻页功能**
   - 需求：`wiki/request/req-pagination-feature.md`
   - 计划：`wiki/plan/14-pagination-feature-plan.md`

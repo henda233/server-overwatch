@@ -1,7 +1,7 @@
 ---
 plan_id: plan_014
 related_request: "用户需求：历史查询命令增加翻页功能"
-status: executing
+status: completed
 created_at: 2026-04-08 20:40:00
 ---
 # 📋 执行计划：历史查询命令翻页功能

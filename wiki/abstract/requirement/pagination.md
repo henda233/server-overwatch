@@ -6,8 +6,8 @@ source_contents:
 dependencies:
   - "abs_005"
 created_at: 2026-04-08 20:40:00
-updated_at: 2026-04-08 20:40:00
-audit_status: pending
+updated_at: 2026-04-08 20:40:05
+audit_status: approved
 ---
 
 # 📖 摘要：历史查询翻页功能
@@ -18,7 +18,7 @@ audit_status: pending
 
 | 需求ID | 功能描述 | 状态 |
 |--------|---------|------|
-| R14 | 历史查询命令翻页功能 | ⏳ 待执行 |
+| R14 | 历史查询命令翻页功能 | ✅ 已完成 |
 
 ### 翻页语法
 
