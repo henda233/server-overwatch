@@ -3,7 +3,7 @@
 负责将采集和查询的数据格式化为友好的文本输出
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Formatter:
