@@ -217,7 +217,7 @@ def main():
     collector = Collector()
     recorder = Recorder()
     formatter = Formatter()
-    handler = CommandHandler(collector, recorder, formatter)
+    handler = CommandHandler(collector, recorder, formatter, page_size=config.page_size)
     
     # 启动定时采集
     periodic = PeriodicCollector(

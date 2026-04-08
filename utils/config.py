@@ -86,3 +86,8 @@ class Config:
     def log_file(self) -> str:
         """获取日志文件路径"""
         return self.get("logging.file", "logs/bot.log")
+    
+    @property
+    def page_size(self) -> int:
+        """获取每页默认条数"""
+        return self.get("pagination.page_size", 10)

@@ -131,34 +131,54 @@ class Recorder:
         
         return records
     
-    def query_filtered(self, time_range: str, username: Optional[str] = None) -> Tuple[List[Dict], Dict]:
-        """查询历史数据（过滤0值，只保留有显存占用的记录）
+    def query_filtered(self, time_range: str, username: Optional[str] = None,
+                   page: int = 1, page_size: int = 10) -> Tuple[List[Dict], Dict]:
+        """查询历史数据（过滤0值，支持分页）
         
         Args:
             time_range: 时间范围，如 "1d", "7d", "2w", "1m"
             username: 可选，指定用户名
+            page: 页码，默认第1页
+            page_size: 每页条数，默认10条
             
         Returns:
             (过滤后的记录列表, 统计信息Dict)
             统计信息: {
                 "total": int,      # 总记录数
-                "valid": int,      # 有效记录数
+                "valid": int,      # 有效记录数（受分页影响）
                 "filtered": int,   # 被过滤的0值记录数
                 "cpu_peak": float, # CPU峰值
                 "mem_peak": float, # 内存峰值
-                "gpu_peak": float  # GPU峰值
+                "gpu_peak": float, # GPU峰值
+                "total_pages": int # 总页数
             }
         """
         delta = self._parse_time_range(time_range)
         if delta is None:
-            return [], {"total": 0, "valid": 0, "filtered": 0, "cpu_peak": 0, "mem_peak": 0, "gpu_peak": 0}
+            return [], {"total": 0, "valid": 0, "filtered": 0, "cpu_peak": 0, "mem_peak": 0, "gpu_peak": 0, "total_pages": 0}
         
         start_time = datetime.now() - delta
         
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # 查询总记录数
+        # 过滤条件：只过滤所有资源都为0的记录
+        filter_condition = "NOT (gpu_memory_mb = 0 AND cpu_percent = 0 AND memory_percent = 0)"
+        
+        # 查询总记录数（过滤后）
+        if username:
+            cursor.execute(f"""
+                SELECT COUNT(*) FROM resource_history
+                WHERE timestamp >= ? AND username = ? AND {filter_condition}
+            """, (start_time.isoformat(), username))
+        else:
+            cursor.execute(f"""
+                SELECT COUNT(*) FROM resource_history
+                WHERE timestamp >= ? AND {filter_condition}
+            """, (start_time.isoformat(),))
+        filtered_total = cursor.fetchone()[0] or 0
+        
+        # 查询原始总记录数（未过滤）
         if username:
             cursor.execute("""
                 SELECT COUNT(*) FROM resource_history
@@ -171,10 +191,14 @@ class Recorder:
             """, (start_time.isoformat(),))
         total = cursor.fetchone()[0] or 0
         
-        # 查询1: 获取峰值（全局聚合，与过滤记录分开）
-        # 过滤条件：只过滤所有资源都为0的记录
-        filter_condition = "NOT (gpu_memory_mb = 0 AND cpu_percent = 0 AND memory_percent = 0)"
+        # 计算总页数
+        total_pages = max(1, (filtered_total + page_size - 1) // page_size)
+        # 确保页码在有效范围内
+        page = min(max(1, page), total_pages)
+        # 计算 OFFSET
+        offset = (page - 1) * page_size
         
+        # 查询1: 获取峰值（全局聚合，与过滤记录分开）
         if username:
             cursor.execute(f"""
                 SELECT MAX(cpu_percent), MAX(memory_percent), MAX(gpu_percent)
@@ -193,7 +217,7 @@ class Recorder:
         mem_peak = peak_row[1] or 0 if peak_row else 0
         gpu_peak = peak_row[2] or 0 if peak_row else 0
         
-        # 查询2: 获取过滤后的记录列表（按时间倒序）
+        # 查询2: 获取分页后的记录列表（按时间倒序）
         if username:
             cursor.execute(f"""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
@@ -201,8 +225,8 @@ class Recorder:
                 FROM resource_history
                 WHERE timestamp >= ? AND username = ? AND {filter_condition}
                 ORDER BY timestamp DESC
-                LIMIT 500
-            """, (start_time.isoformat(), username))
+                LIMIT ? OFFSET ?
+            """, (start_time.isoformat(), username, page_size, offset))
         else:
             cursor.execute(f"""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
@@ -210,8 +234,8 @@ class Recorder:
                 FROM resource_history
                 WHERE timestamp >= ? AND {filter_condition}
                 ORDER BY timestamp DESC
-                LIMIT 500
-            """, (start_time.isoformat(),))
+                LIMIT ? OFFSET ?
+            """, (start_time.isoformat(), page_size, offset))
         
         rows = cursor.fetchall()
         conn.close()
@@ -230,10 +254,12 @@ class Recorder:
         stats = {
             "total": total,
             "valid": len(records),
-            "filtered": total - len(records),
+            "filtered": total - filtered_total,
             "cpu_peak": cpu_peak,
             "mem_peak": mem_peak,
-            "gpu_peak": gpu_peak
+            "gpu_peak": gpu_peak,
+            "total_pages": total_pages,
+            "current_page": page
         }
         
         return records, stats

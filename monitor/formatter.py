@@ -94,19 +94,40 @@ class Formatter:
         return "\n".join(lines)
     
     def format_history_compact(self, records: List[Dict], stats: Dict, 
-                               time_range: str, username: Optional[str] = None) -> str:
-        """格式化精简版历史数据（统一单行文字格式）
+                               time_range: str, username: Optional[str] = None,
+                               page: int = 1, page_size: int = 10) -> str:
+        """格式化精简版历史数据（支持分页导航）
         
         Args:
             records: 过滤后的记录列表
-            stats: 统计信息（total, valid, filtered, cpu_peak, mem_peak, gpu_peak）
+            stats: 统计信息（total, valid, filtered, cpu_peak, mem_peak, gpu_peak, total_pages, current_page）
             time_range: 查询的时间范围
             username: 指定用户时显示用户名前缀，None时显示多用户模式
+            page: 当前页码
+            page_size: 每页条数
         """
         if not records:
             return f"📭 暂无 {time_range} 的历史记录"
         
         lines = []
+        
+        # 获取分页信息
+        total_pages = stats.get('total_pages', 1)
+        current_page = stats.get('current_page', page)
+        
+        # 页码导航头
+        if total_pages > 1:
+            lines.append(f"📄 第{current_page}页/共{total_pages}页")
+            if current_page < total_pages:
+                # 构建下一页命令提示
+                if username:
+                    cmd_hint = f"/info {username} {time_range} {current_page + 1}"
+                else:
+                    cmd_hint = f"/info {time_range} {current_page + 1}"
+                lines.append(f"还有{total_pages - current_page}页数据，输入 {cmd_hint} 查看下一页")
+            else:
+                lines.append("（最后一页）")
+            lines.append("")
         
         # 标题行
         if username:
@@ -117,13 +138,12 @@ class Formatter:
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         # 统计行
-        lines.append(f"统计: {stats['valid']}条有效 / {stats['total']}条总（已过滤{stats['filtered']}条空闲）")
+        lines.append(f"统计: {stats['valid']}条 / {stats['total']}条总（已过滤{stats['filtered']}条空闲）")
         lines.append(f"GPU峰值: {stats.get('gpu_peak', 0):.1f}%  |  CPU峰值: {stats['cpu_peak']:.1f}%  |  内存峰值: {stats['mem_peak']:.1f}%")
         lines.append("")
         
-        # 数据行（限制15条）
-        max_rows = 15
-        for record in records[:max_rows]:
+        # 数据行（使用 page_size 限制）
+        for record in records[:page_size]:
             timestamp = record.get("timestamp", "")[5:16]  # MM-DD HH:MM
             gpu = record.get("gpu_percent", 0)
             gpu_mem_gb = record.get("gpu_memory_mb", 0) / 1024 if record.get("gpu_memory_mb") else 0
@@ -137,10 +157,6 @@ class Formatter:
                 line = f"{timestamp}  {user:<6}  GPU: {gpu:>5.1f}%  显存: {gpu_mem_gb:.1f}GB"
             
             lines.append(line)
-        
-        # 截断提示
-        if len(records) > max_rows:
-            lines.append(f"... 还有 {len(records) - max_rows} 条记录")
         
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
@@ -206,6 +222,7 @@ class Formatter:
         lines.append("  /info <number>w    - 查看最近N周历史 (如: /info 2w)")
         lines.append("  /info <number>m    - 查看最近N月历史 (如: /info 3m)")
         lines.append("  /info <用户> <时间> - 查看指定用户的历史 (如: /info cxy 7d)")
+        lines.append("  /info <时间> <页码> - 历史查询翻页 (如: /info 7d 2)")
         lines.append("")
         lines.append("📌 统计查询:")
         lines.append("  /stats <时间>      - 查看资源使用统计 (如: /stats 3d)")

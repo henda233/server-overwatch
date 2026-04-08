@@ -23,6 +23,7 @@ class Command:
     target: Optional[str] = None  # 用户名 或 None
     time_range: Optional[str] = None  # "1d", "1w", "1m", None
     sort_by: Optional[str] = None  # "gpu", "mem", "cpu", None (用于top命令)
+    page: int = 1  # 页码，默认第1页
 
 
 class CommandHandler:
@@ -40,7 +41,8 @@ class CommandHandler:
         self,
         collector: "Collector",
         recorder: "Recorder",
-        formatter: "Formatter"
+        formatter: "Formatter",
+        page_size: int = 10
     ):
         """初始化命令处理器
         
@@ -48,10 +50,12 @@ class CommandHandler:
             collector: 数据采集器
             recorder: 历史记录管理器
             formatter: 格式化器
+            page_size: 每页默认条数
         """
         self.collector = collector
         self.recorder = recorder
         self.formatter = formatter
+        self.page_size = page_size
         # 命令日志记录器
         self.command_logger = setup_logger("command", log_dir="logs")
     
@@ -59,16 +63,26 @@ class CommandHandler:
         """解析命令文本
         
         Args:
-            text: 命令文本，如 "/info user1 3d" 或 "/info 7d"
+            text: 命令文本，如 "/info user1 3d" 或 "/info 7d 2"
             
         Returns:
             Command对象
         """
         text = text.strip()
         
+        # 解析页码：最后一个参数是否为数字
+        parts = text.split()
+        page = 1
+        if len(parts) > 1:
+            last_part = parts[-1]
+            if last_part.isdigit() and int(last_part) > 0:
+                page = int(last_part)
+                # 移除页码参数重新解析
+                text = " ".join(parts[:-1])
+        
         # 解析 /help 命令
         if text == "/help" or text == "help":
-            return Command(action="help")
+            return Command(action="help", page=page)
         
         # 解析 /info 命令
         if text.startswith("/info"):
@@ -76,14 +90,14 @@ class CommandHandler:
             
             if not rest:
                 # /info - 查询所有用户（实时）
-                return Command(action="info")
+                return Command(action="info", page=page)
             
             # 时间范围模式 (数字 + d/w/m)
             time_pattern = r"^(\d+)([dDwWmM])$"
             time_match = re.match(time_pattern, rest)
             if time_match:
                 num, unit = time_match.groups()
-                return Command(action="info", time_range=f"{num}{unit.lower()}")
+                return Command(action="info", time_range=f"{num}{unit.lower()}", page=page)
             
             # 组合命令模式: /info <用户名> <时间范围>
             # 匹配 "用户名 + 空格 + 时间" 的格式
@@ -91,43 +105,43 @@ class CommandHandler:
             combo_match = re.match(combo_pattern, rest)
             if combo_match:
                 username, num, unit = combo_match.groups()
-                return Command(action="info", target=username, time_range=f"{num}{unit.lower()}")
+                return Command(action="info", target=username, time_range=f"{num}{unit.lower()}", page=page)
             
             # 否则当作用户名（实时查询）
-            return Command(action="info", target=rest)
+            return Command(action="info", target=rest, page=page)
         
         # 解析 /stats 命令
         if text.startswith("/stats"):
             rest = text[6:].strip()
             if not rest:
                 # /stats 默认7天
-                return Command(action="stats", time_range="7d")
+                return Command(action="stats", time_range="7d", page=page)
             # 匹配时间范围
             time_pattern = r"^(\d+)([dDwWmM])$"
             time_match = re.match(time_pattern, rest)
             if time_match:
                 num, unit = time_match.groups()
-                return Command(action="stats", time_range=f"{num}{unit.lower()}")
-            return Command(action="help")
+                return Command(action="stats", time_range=f"{num}{unit.lower()}", page=page)
+            return Command(action="help", page=page)
         
         # 解析 /top 命令
         if text.startswith("/top"):
             rest = text[4:].strip()
             if not rest:
                 # /top 默认按GPU排序
-                return Command(action="top", sort_by="gpu")
+                return Command(action="top", sort_by="gpu", page=page)
             # 匹配排序参数
             sort_options = ["gpu", "mem", "cpu"]
             if rest.lower() in sort_options:
-                return Command(action="top", sort_by=rest.lower())
-            return Command(action="help")
+                return Command(action="top", sort_by=rest.lower(), page=page)
+            return Command(action="help", page=page)
         
         # 解析 /users 命令
         if text.startswith("/users"):
             rest = text[6:].strip()
             if not rest:
                 # /users 默认30天
-                return Command(action="users", time_range="30")
+                return Command(action="users", time_range="30", page=page)
             # 匹配时间范围（只匹配数字，自动按天计算）
             time_pattern = r"^(\d+)([dDwWmM])?$"
             time_match = re.match(time_pattern, rest)
@@ -142,11 +156,11 @@ class CommandHandler:
                         days = int(num) * 30
                 else:
                     days = int(num)
-                return Command(action="users", time_range=str(days))
-            return Command(action="help")
+                return Command(action="users", time_range=str(days), page=page)
+            return Command(action="help", page=page)
         
         # 默认返回帮助
-        return Command(action="help")
+        return Command(action="help", page=page)
     
     async def handle(self, message_text: str, user_id: str = "unknown") -> str:
         """处理消息
@@ -171,10 +185,12 @@ class CommandHandler:
                     # 检查 recorder 是否有 query_filtered 方法
                     if hasattr(self.recorder, 'query_filtered'):
                         records, stats = self.recorder.query_filtered(
-                            command.time_range, command.target
+                            command.time_range, command.target,
+                            page=command.page, page_size=self.page_size
                         )
                         return self.formatter.format_history_compact(
-                            records, stats, command.time_range, command.target
+                            records, stats, command.time_range, command.target,
+                            page=command.page, page_size=self.page_size
                         )
                     else:
                         return "❌ 服务器暂不支持历史查询"
@@ -182,9 +198,12 @@ class CommandHandler:
                 # 仅时间范围: /info 3d
                 if command.time_range:
                     if hasattr(self.recorder, 'query_filtered'):
-                        records, stats = self.recorder.query_filtered(command.time_range)
+                        records, stats = self.recorder.query_filtered(
+                            command.time_range, page=command.page, page_size=self.page_size
+                        )
                         return self.formatter.format_history_compact(
-                            records, stats, command.time_range
+                            records, stats, command.time_range,
+                            page=command.page, page_size=self.page_size
                         )
                     else:
                         records = self.recorder.query(command.time_range)
