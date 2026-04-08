@@ -322,3 +322,109 @@ class Recorder:
             "earliest": row[1],
             "latest": row[2]
         }
+    
+    def get_all_users_stats(self, time_range: str) -> Dict[str, Dict]:
+        """获取所有用户的历史统计信息
+        
+        Args:
+            time_range: 时间范围，如 "1d", "7d", "2w", "1m"
+            
+        Returns:
+            Dict[用户名, Dict[统计信息]]
+            统计信息: {
+                "gpu_peak": float,      # GPU使用率峰值
+                "gpu_avg": float,       # GPU使用率平均值
+                "mem_peak_gb": float,   # 显存峰值(GB)
+                "mem_avg_gb": float,    # 显存平均值(GB)
+                "active_hours": int     # 活跃小时数（有记录的小时数）
+            }
+        """
+        delta = self._parse_time_range(time_range)
+        if delta is None:
+            return {}
+        
+        start_time = datetime.now() - delta
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 按用户聚合统计
+        cursor.execute("""
+            SELECT 
+                username,
+                MAX(gpu_percent) as gpu_peak,
+                AVG(gpu_percent) as gpu_avg,
+                MAX(gpu_memory_mb) / 1024.0 as mem_peak_gb,
+                AVG(gpu_memory_mb) / 1024.0 as mem_avg_gb
+            FROM resource_history
+            WHERE timestamp >= ? AND gpu_memory_mb > 0
+            GROUP BY username
+        """, (start_time.isoformat(),))
+        
+        rows = cursor.fetchall()
+        
+        # 计算活跃小时数（独立小时数）
+        cursor.execute("""
+            SELECT username, COUNT(DISTINCT strftime('%Y-%m-%d %H', timestamp)) as active_hours
+            FROM resource_history
+            WHERE timestamp >= ? AND gpu_memory_mb > 0
+            GROUP BY username
+        """, (start_time.isoformat(),))
+        
+        hours_rows = cursor.fetchall()
+        hours_map = {row[0]: row[1] for row in hours_rows}
+        
+        conn.close()
+        
+        result = {}
+        for row in rows:
+            username = row[0]
+            result[username] = {
+                "gpu_peak": round(row[1] or 0, 1),
+                "gpu_avg": round(row[2] or 0, 1),
+                "mem_peak_gb": round(row[3] or 0, 1),
+                "mem_avg_gb": round(row[4] or 0, 1),
+                "active_hours": hours_map.get(username, 0)
+            }
+        
+        return result
+    
+    def get_all_users(self, days: int = 30) -> List[Dict]:
+        """获取所有历史用户及其简要统计
+        
+        Args:
+            days: 统计天数（默认30天）
+            
+        Returns:
+            用户列表，每条记录包含: username, last_active, total_records, gpu_peak
+        """
+        cutoff = datetime.now() - timedelta(days=days)
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                username,
+                MAX(timestamp) as last_active,
+                COUNT(*) as total_records,
+                MAX(gpu_percent) as gpu_peak
+            FROM resource_history
+            WHERE timestamp >= ?
+            GROUP BY username
+            ORDER BY last_active DESC
+        """, (cutoff.isoformat(),))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        result = []
+        for row in rows:
+            result.append({
+                "username": row[0],
+                "last_active": row[1][:16] if row[1] else "无",
+                "total_records": row[2],
+                "gpu_peak": row[3] or 0
+            })
+        
+        return result

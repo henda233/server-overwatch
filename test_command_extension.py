@@ -46,7 +46,8 @@ def test_parser():
     for cmd, desc in test_cases:
         try:
             result = handler.parse(cmd)
-            print(f"✅ {cmd:20} -> action={result.action}, target={result.target}, time_range={result.time_range}, sort_by={result.sort_by}")
+            sort_by = getattr(result, 'sort_by', None)
+            print(f"✅ {cmd:20} -> action={result.action}, target={result.target}, time_range={result.time_range}, sort_by={sort_by}")
         except Exception as e:
             print(f"❌ {cmd:20} -> 错误: {e}")
             all_passed = False

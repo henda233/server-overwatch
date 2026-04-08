@@ -15,10 +15,11 @@ if TYPE_CHECKING:
 
 @dataclass
 class Command:
-    """命令数据结构"""
-    action: str           # "info", "help"
+    """命令数据结构（扩展版）"""
+    action: str           # "info", "help", "stats", "top", "users"
     target: Optional[str] = None  # 用户名 或 None
     time_range: Optional[str] = None  # "1d", "1w", "1m", None
+    sort_by: Optional[str] = None  # "gpu", "mem", "cpu", None (用于top命令)
 
 
 class CommandHandler:
@@ -90,6 +91,55 @@ class CommandHandler:
             # 否则当作用户名（实时查询）
             return Command(action="info", target=rest)
         
+        # 解析 /stats 命令
+        if text.startswith("/stats"):
+            rest = text[6:].strip()
+            if not rest:
+                # /stats 默认7天
+                return Command(action="stats", time_range="7d")
+            # 匹配时间范围
+            time_pattern = r"^(\d+)([dDwWmM])$"
+            time_match = re.match(time_pattern, rest)
+            if time_match:
+                num, unit = time_match.groups()
+                return Command(action="stats", time_range=f"{num}{unit.lower()}")
+            return Command(action="help")
+        
+        # 解析 /top 命令
+        if text.startswith("/top"):
+            rest = text[4:].strip()
+            if not rest:
+                # /top 默认按GPU排序
+                return Command(action="top", sort_by="gpu")
+            # 匹配排序参数
+            sort_options = ["gpu", "mem", "cpu"]
+            if rest.lower() in sort_options:
+                return Command(action="top", sort_by=rest.lower())
+            return Command(action="help")
+        
+        # 解析 /users 命令
+        if text.startswith("/users"):
+            rest = text[6:].strip()
+            if not rest:
+                # /users 默认30天
+                return Command(action="users", time_range="30")
+            # 匹配时间范围（只匹配数字，自动按天计算）
+            time_pattern = r"^(\d+)([dDwWmM])?$"
+            time_match = re.match(time_pattern, rest)
+            if time_match:
+                num = time_match.group(1)
+                unit = time_match.group(2)
+                if unit and unit.lower() in ['w', 'm']:
+                    # 周/月按天计算
+                    if unit.lower() == 'w':
+                        days = int(num) * 7
+                    else:
+                        days = int(num) * 30
+                else:
+                    days = int(num)
+                return Command(action="users", time_range=str(days))
+            return Command(action="help")
+        
         # 默认返回帮助
         return Command(action="help")
     
@@ -142,5 +192,36 @@ class CommandHandler:
             else:
                 data = self.collector.collect()
                 return self.formatter.format_realtime(data)
+        
+        # /stats 命令 - 统计摘要
+        if command.action == "stats":
+            if hasattr(self.recorder, 'get_all_users_stats'):
+                stats = self.recorder.get_all_users_stats(command.time_range)
+                return self.formatter.format_stats(stats, command.time_range)
+            else:
+                return "❌ 服务器暂不支持统计查询"
+        
+        # /top 命令 - 排行榜
+        if command.action == "top":
+            # 先获取实时数据排序
+            data = self.collector.collect()
+            if not data:
+                return "📭 当前没有在线用户"
+            # 按指定字段排序
+            sorted_users = sorted(
+                data.items(),
+                key=lambda x: x[1].get(f"{command.sort_by}_percent" if command.sort_by != 'mem' else 'gpu_memory_mb', 0),
+                reverse=True
+            )
+            sorted_data = {k: v for k, v in sorted_users}
+            return self.formatter.format_top(sorted_data, command.sort_by)
+        
+        # /users 命令 - 用户列表
+        if command.action == "users":
+            if hasattr(self.recorder, 'get_all_users'):
+                users = self.recorder.get_all_users(int(command.time_range))
+                return self.formatter.format_users(users, command.time_range)
+            else:
+                return "❌ 服务器暂不支持用户查询"
         
         return "❌ 未知命令，请使用 /help 查看帮助"

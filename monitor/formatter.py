@@ -207,6 +207,12 @@ class Formatter:
         lines.append("  /info <number>m    - 查看最近N月历史 (如: /info 3m)")
         lines.append("  /info <用户> <时间> - 查看指定用户的历史 (如: /info cxy 7d)")
         lines.append("")
+        lines.append("📌 统计查询:")
+        lines.append("  /stats <时间>      - 查看资源使用统计 (如: /stats 3d)")
+        lines.append("  /top               - 查看资源使用排行")
+        lines.append("  /top gpu/mem/cpu  - 按GPU/显存/CPU排序")
+        lines.append("  /users [天数]      - 查看服务器用户列表")
+        lines.append("")
         lines.append("💡 提示: 输入 @机器人 + 命令")
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
@@ -240,3 +246,139 @@ class Formatter:
             return f"{used_gb:.2f}GB/{total_gb:.2f}GB"
         else:
             return f"{used_mb}MB"
+    
+    def format_stats(self, stats: Dict[str, Dict], time_range: str) -> str:
+        """格式化统计摘要
+        
+        Args:
+            stats: Dict[用户名, 统计信息]
+            time_range: 查询的时间范围
+            
+        Returns:
+            格式化的统计文本
+        """
+        if not stats:
+            return f"📭 暂无 {time_range} 的统计数据"
+        
+        lines = []
+        lines.append(f"📊 过去 {time_range} 的资源使用统计")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("")
+        
+        # 按GPU峰值排序
+        sorted_users = sorted(stats.items(), key=lambda x: x[1]["gpu_peak"], reverse=True)
+        
+        for username, user_stats in sorted_users:
+            gpu_peak = user_stats.get("gpu_peak", 0)
+            gpu_avg = user_stats.get("gpu_avg", 0)
+            mem_peak = user_stats.get("mem_peak_gb", 0)
+            mem_avg = user_stats.get("mem_avg_gb", 0)
+            hours = user_stats.get("active_hours", 0)
+            
+            lines.append(f"👤 {username}")
+            lines.append(f"   GPU峰值: {gpu_peak:.1f}% | 平均: {gpu_avg:.1f}%")
+            lines.append(f"   显存峰值: {mem_peak:.1f}GB | 平均: {mem_avg:.1f}GB")
+            lines.append(f"   活跃时段: 累计{hours}小时")
+            lines.append("")
+        
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        return "\n".join(lines)
+    
+    def format_top(self, data: Dict[str, Dict], sort_by: str = "gpu") -> str:
+        """格式化排行榜
+        
+        Args:
+            data: Dict[用户名, 资源数据]
+            sort_by: 排序字段 "gpu", "mem", "cpu"
+            
+        Returns:
+            格式化的排行榜文本
+        """
+        if not data:
+            return "📭 当前没有在线用户"
+        
+        # 排序名称映射
+        sort_names = {"gpu": "GPU 使用率", "mem": "显存使用量", "cpu": "CPU 使用率"}
+        sort_name = sort_names.get(sort_by, "GPU 使用率")
+        
+        lines = []
+        lines.append(f"🏆 当前资源使用排行榜")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"按 {sort_name} 排序:")
+        lines.append("")
+        
+        # 奖牌emoji
+        medals = ["🥇", "🥈", "🥉"]
+        
+        # 获取排序键
+        if sort_by == "mem":
+            sort_key = lambda x: x[1].get("gpu_memory_mb", 0)
+        else:
+            sort_key = lambda x: x[1].get(f"{sort_by}_percent", 0)
+        
+        sorted_users = sorted(data.items(), key=sort_key, reverse=True)
+        
+        for i, (username, stats) in enumerate(sorted_users[:10]):
+            medal = medals[i] if i < 3 else f"{i+1}."
+            gpu = stats.get("gpu_percent", 0)
+            gpu_mem = stats.get("gpu_memory_mb", 0)
+            gpu_mem_gb = gpu_mem / 1024 if gpu_mem else 0
+            cpu = stats.get("cpu_percent", 0)
+            
+            # 根据排序字段调整显示
+            if sort_by == "gpu":
+                line = f"{medal} {username:<8} GPU: {gpu:>5.1f}%  显存: {gpu_mem_gb:>5.1f}GB  CPU: {cpu:>5.1f}%"
+            elif sort_by == "mem":
+                line = f"{medal} {username:<8} 显存: {gpu_mem_gb:>5.1f}GB  GPU: {gpu:>5.1f}%  CPU: {cpu:>5.1f}%"
+            else:
+                line = f"{medal} {username:<8} CPU: {cpu:>5.1f}%  GPU: {gpu:>5.1f}%  显存: {gpu_mem_gb:>5.1f}GB"
+            
+            lines.append(line)
+        
+        lines.append("")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"在线用户: {len(data)}人")
+        
+        return "\n".join(lines)
+    
+    def format_users(self, users: List[Dict], time_range: str = "30") -> str:
+        """格式化用户列表
+        
+        Args:
+            users: 用户列表
+            time_range: 查询的时间范围字符串
+            
+        Returns:
+            格式化的用户列表文本
+        """
+        if not users:
+            return f"📭 近 {time_range} 天内暂无用户记录"
+        
+        lines = []
+        lines.append("👥 服务器用户统计")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"📌 共 {len(users)} 个用户（近{time_range}天）")
+        lines.append("")
+        
+        # 表头
+        lines.append("用户名      | 最后活跃      | 总记录数  | 峰值GPU")
+        lines.append("-" * 45)
+        
+        # 数据行（限制20个用户）
+        for user in users[:20]:
+            username = user.get("username", "")[:8]
+            last_active = user.get("last_active", "无")[:12]
+            total = user.get("total_records", 0)
+            gpu_peak = user.get("gpu_peak", 0)
+            
+            line = f"{username:<10}| {last_active:<14}| {total:>6}    | {gpu_peak:>5.1f}%"
+            lines.append(line)
+        
+        # 截断提示
+        if len(users) > 20:
+            lines.append(f"... 还有 {len(users) - 20} 个用户")
+        
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        return "\n".join(lines)
