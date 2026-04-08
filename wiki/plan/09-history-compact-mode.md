@@ -1,6 +1,6 @@
 # 📦 历史记录精简模式 & 统一 UI 优化
 
-> PLAN-009 | v1.1 | 2026-04-08 | status: pending
+> PLAN-009 | v1.1 | 2026-04-08 | status: completed
 
 ## 1. 背景问题
 

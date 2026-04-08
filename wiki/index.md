@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-07 20:40 | 🤖 维护Agent：v2.6 | 📦 总摘要数：8 + 计划文档10份 + 部署文档1份
+> 🔄 最后同步：2026-04-08 12:00 | 🤖 维护Agent：v2.7 | 📦 总摘要数：9 + 计划文档10份 + 部署文档1份
 
 ## 📊 模块总览
 
@@ -14,6 +14,7 @@
 | `abs_phase1` | `dev_progress/phase1` | [🔗](./abstract/dev_progress/phase1-complete.md) | ✅ 阶段1完成 | 04-07 |
 | `abs_phase2` | `dev_progress/botpy-intents` | [🔗](./abstract/dev_progress/botpy-intents-fix.md) | ✅ intents配置修复 + 私聊支持 | 04-07 |
 | `abs_006` | `config/env` | [🔗](./abstract/config/env.md) | 开发环境配置 | 04-07 |
+| `abs_plan09` | `dev_progress/plan-09` | [🔗](./abstract/dev_progress/plan-09-complete.md) | ✅ 历史记录精简模式完成 | 04-08 |
 
 ## 📐 开发计划文档
 
@@ -27,7 +28,7 @@
 | PLAN-006 | nvidia-smi字段解析Bug修复 | v2.0 | ✅ 完成 | [🔗](./plan/06-who-missing-process-user-fix.md) |
 | PLAN-007 | 按用户区分CPU/内存/GPU使用率 | v1.0 | ✅ 已完成 | [🔗](./plan/07-user-cpu-memory-gpu-percent-fix.md) |
 | PLAN-008 | GPU使用率和显存显示小数 | v1.0 | ✅ 完成 | [🔗](./plan/08-gpu-memory-decimal-fix.md) |
-| PLAN-009 | 历史记录精简模式 | v1.0 | 📋 待开发 | [🔗](./plan/09-history-compact-mode.md) |
+| PLAN-009 | 历史记录精简模式 | v1.0 | ✅ 完成 | [🔗](./plan/09-history-compact-mode.md) |
 | PLAN-010 | QQ机器人命令扩展 | v1.0 | 📋 待开发 | [🔗](./plan/10-command-extension.md) |
 
 ## 🚨 开发待办
@@ -72,11 +73,18 @@
 - [x] 部署到GPU服务器 ✅ 验证通过
 
 ### 阶段8: 命令扩展与历史精简
-- [ ] PLAN-009: 历史记录精简模式（过滤0值）
+- [x] PLAN-009: 历史记录精简模式（过滤0值） ✅
 - [ ] PLAN-010: 新增命令 `/stats`, `/top`, `/users`, `/info <用户> <时间>`
 
 ## 📝 全局更新日志（近10条）
 
+- `04-08 12:00`: ✅ **PLAN-009 完成：历史记录精简模式 & 统一UI优化**
+  - 新增 `/info <用户> <时间>` 组合命令支持
+  - 历史查询自动过滤0值记录（显存=0）
+  - 实时与历史查询使用统一单行文字格式（不依赖等宽字体）
+  - 显示统计摘要（有效/总/过滤数 + GPU/CPU/内存峰值）
+  - 修复 `query_filtered()` SQL查询bug
+  - 用户在GPU服务器验证通过
 - `04-07 20:40`: 📋 **PLAN-009 + PLAN-010 创建：命令扩展规划**
   - PLAN-009：历史记录精简模式，过滤0值记录，显示统计摘要
   - PLAN-010：新增4个命令 `/info <用户> <时间>`, `/stats`, `/top`, `/users`
