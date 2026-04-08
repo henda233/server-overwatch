@@ -171,40 +171,49 @@ class Recorder:
             """, (start_time.isoformat(),))
         total = cursor.fetchone()[0] or 0
         
-        # 查询过滤后的记录（gpu_memory_mb > 0）并计算峰值
+        # 查询1: 获取峰值（全局聚合，与过滤记录分开）
+        if username:
+            cursor.execute("""
+                SELECT MAX(cpu_percent), MAX(memory_percent), MAX(gpu_percent)
+                FROM resource_history
+                WHERE timestamp >= ? AND username = ? AND gpu_memory_mb > 0
+            """, (start_time.isoformat(), username))
+        else:
+            cursor.execute("""
+                SELECT MAX(cpu_percent), MAX(memory_percent), MAX(gpu_percent)
+                FROM resource_history
+                WHERE timestamp >= ? AND gpu_memory_mb > 0
+            """, (start_time.isoformat(),))
+        
+        peak_row = cursor.fetchone()
+        cpu_peak = peak_row[0] or 0 if peak_row else 0
+        mem_peak = peak_row[1] or 0 if peak_row else 0
+        gpu_peak = peak_row[2] or 0 if peak_row else 0
+        
+        # 查询2: 获取过滤后的记录列表（按时间倒序）
         if username:
             cursor.execute("""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
-                       cpu_percent, memory_percent,
-                       MAX(cpu_percent) as cpu_peak,
-                       MAX(memory_percent) as mem_peak,
-                       MAX(gpu_percent) as gpu_peak
+                       cpu_percent, memory_percent
                 FROM resource_history
                 WHERE timestamp >= ? AND username = ? AND gpu_memory_mb > 0
-                GROUP BY timestamp, username
                 ORDER BY timestamp DESC
+                LIMIT 500
             """, (start_time.isoformat(), username))
         else:
             cursor.execute("""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
-                       cpu_percent, memory_percent,
-                       MAX(cpu_percent) as cpu_peak,
-                       MAX(memory_percent) as mem_peak,
-                       MAX(gpu_percent) as gpu_peak
+                       cpu_percent, memory_percent
                 FROM resource_history
                 WHERE timestamp >= ? AND gpu_memory_mb > 0
-                GROUP BY timestamp, username
                 ORDER BY timestamp DESC
+                LIMIT 500
             """, (start_time.isoformat(),))
         
         rows = cursor.fetchall()
         conn.close()
         
         records = []
-        cpu_peak = 0.0
-        mem_peak = 0.0
-        gpu_peak = 0.0
-        
         for row in rows:
             records.append({
                 "timestamp": row[0],
@@ -214,9 +223,6 @@ class Recorder:
                 "cpu_percent": row[4],
                 "memory_percent": row[5]
             })
-            cpu_peak = max(cpu_peak, row[4] or 0)
-            mem_peak = max(mem_peak, row[5] or 0)
-            gpu_peak = max(gpu_peak, row[2] or 0)
         
         stats = {
             "total": total,
