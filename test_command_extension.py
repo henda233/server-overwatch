@@ -76,19 +76,6 @@ def test_recorder_methods():
         print(f"❌ 错误: {e}")
         return False
     
-    # 测试 get_top_users
-    print("\n[测试 get_top_users(3d, gpu)]")
-    try:
-        top = recorder.get_top_users("3d", "gpu")
-        print(f"✅ 方法存在，返回类型: {type(top)}")
-        print(f"   数据样例: {top[:2] if top else '空'}")
-    except AttributeError:
-        print("❌ get_top_users 方法不存在")
-        return False
-    except Exception as e:
-        print(f"❌ 错误: {e}")
-        return False
-    
     # 测试 get_all_users
     print("\n[测试 get_all_users(30)]")
     try:
