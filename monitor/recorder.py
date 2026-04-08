@@ -172,17 +172,20 @@ class Recorder:
         total = cursor.fetchone()[0] or 0
         
         # 查询1: 获取峰值（全局聚合，与过滤记录分开）
+        # 过滤条件：只过滤所有资源都为0的记录
+        filter_condition = "NOT (gpu_memory_mb = 0 AND cpu_percent = 0 AND memory_percent = 0)"
+        
         if username:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT MAX(cpu_percent), MAX(memory_percent), MAX(gpu_percent)
                 FROM resource_history
-                WHERE timestamp >= ? AND username = ? AND gpu_memory_mb > 0
+                WHERE timestamp >= ? AND username = ? AND {filter_condition}
             """, (start_time.isoformat(), username))
         else:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT MAX(cpu_percent), MAX(memory_percent), MAX(gpu_percent)
                 FROM resource_history
-                WHERE timestamp >= ? AND gpu_memory_mb > 0
+                WHERE timestamp >= ? AND {filter_condition}
             """, (start_time.isoformat(),))
         
         peak_row = cursor.fetchone()
@@ -192,20 +195,20 @@ class Recorder:
         
         # 查询2: 获取过滤后的记录列表（按时间倒序）
         if username:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
                        cpu_percent, memory_percent
                 FROM resource_history
-                WHERE timestamp >= ? AND username = ? AND gpu_memory_mb > 0
+                WHERE timestamp >= ? AND username = ? AND {filter_condition}
                 ORDER BY timestamp DESC
                 LIMIT 500
             """, (start_time.isoformat(), username))
         else:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
                        cpu_percent, memory_percent
                 FROM resource_history
-                WHERE timestamp >= ? AND gpu_memory_mb > 0
+                WHERE timestamp >= ? AND {filter_condition}
                 ORDER BY timestamp DESC
                 LIMIT 500
             """, (start_time.isoformat(),))
