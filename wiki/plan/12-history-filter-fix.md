@@ -1,6 +1,6 @@
 # 📋 PLAN-012：历史查询过滤条件修复
 
-> v1.0 | 2026-04-08 | status: pending
+> v1.0 | 2026-04-08 | status: completed
 
 ## 1. 背景问题
 
@@ -41,9 +41,9 @@ WHERE timestamp >= ?
 
 | 序号 | 任务 | 状态 | 备注 |
 |------|------|------|------|
-| 1 | 修改 `query_filtered()` 用户名过滤条件 | ⏳ 待执行 | 2处SQL |
-| 2 | 更新 WIKI 摘要 | ⏳ 待执行 | abs_005 |
-| 3 | 更新 WIKI index | ⏳ 待执行 | index.md |
+| 1 | 修改 `query_filtered()` 用户名过滤条件 | ✅ 已完成 | 4处SQL |
+| 2 | 更新 WIKI 摘要 | ✅ 已完成 | abs_005 |
+| 3 | 更新 WIKI index | ✅ 已完成 | index.md |
 
 ## 5. 验收标准
 

@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-08 11:32 | 🤖 维护Agent：v2.8 | 📦 总摘要数：11 + 计划文档12份
+> 🔄 最后同步：2026-04-08 14:30 | 🤖 维护Agent：v2.8 | 📦 总摘要数：11 + 计划文档12份
 
 ## 📊 模块总览
 
@@ -27,7 +27,7 @@
 | PLAN-009 | 历史记录精简模式 | ✅ | [🔗](./plan/09-history-compact-mode.md) |
 | PLAN-010 | QQ机器人命令扩展 | ✅ | [🔗](./plan/10-command-extension.md) |
 | PLAN-011 | 阶段4: 服务器部署 | ✅ 完成 | [🔗](./plan/11-phase4-deployment.md) |
-| PLAN-012 | 历史查询过滤条件修复 | 📋 待执行 | [🔗](./plan/12-history-filter-fix.md) |
+| PLAN-012 | 历史查询过滤条件修复 | ✅ 完成 | [🔗](./plan/12-history-filter-fix.md) |
 
 ## ✅ 开发待办（状态汇总）
 
@@ -38,11 +38,13 @@
 | 3 | 历史功能（SQLite/定时采集/30天清理/历史查询） | ✅ |
 | 4 | 部署（systemd服务配置/服务器测试） | ✅ 完成 |
 | 5-8 | 用户资源区分/Bug修复/命令扩展 | ✅ |
-| 12 | 历史查询过滤条件修复 | 📋 待执行 |
+| 12 | 历史查询过滤条件修复 | ✅ 完成 |
 
 ## 📝 全局更新日志（近10条）
 
-- `04-08 11:32`: 📋 **PLAN-012创建：历史查询过滤条件修复**
+- `04-08 14:30`: ✅ **PLAN-012完成：历史查询过滤条件修复**
+  - 过滤条件改为 `NOT (gpu_memory_mb = 0 AND cpu_percent = 0 AND memory_percent = 0)`
+  - `/info 1d` 现在能返回有效的CPU/内存使用记录
   - 问题：`/info 1d` 过滤条件 `gpu_memory_mb > 0` 过严，导致记录全被过滤
   - 修复：`NOT (gpu_memory_mb = 0 AND cpu_percent = 0 AND memory_percent = 0)`
 - `04-08 14:20`: ✅ **PLAN-011完成：阶段4服务器部署**
