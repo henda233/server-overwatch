@@ -53,7 +53,7 @@ class CommandHandler:
         """解析命令文本
         
         Args:
-            text: 命令文本，如 "/info user1" 或 "/info 7d"
+            text: 命令文本，如 "/info user1 3d" 或 "/info 7d"
             
         Returns:
             Command对象
@@ -69,17 +69,25 @@ class CommandHandler:
             rest = text[5:].strip()
             
             if not rest:
-                # /info - 查询所有用户
+                # /info - 查询所有用户（实时）
                 return Command(action="info")
             
-            # 检查是否为时间范围 (数字 + d/w/m)
+            # 时间范围模式 (数字 + d/w/m)
             time_pattern = r"^(\d+)([dDwWmM])$"
             time_match = re.match(time_pattern, rest)
             if time_match:
                 num, unit = time_match.groups()
                 return Command(action="info", time_range=f"{num}{unit.lower()}")
             
-            # 否则认为是用户名
+            # 组合命令模式: /info <用户名> <时间范围>
+            # 匹配 "用户名 + 空格 + 时间" 的格式
+            combo_pattern = r"^(\S+)\s+(\d+)([dDwWmM])$"
+            combo_match = re.match(combo_pattern, rest)
+            if combo_match:
+                username, num, unit = combo_match.groups()
+                return Command(action="info", target=username, time_range=f"{num}{unit.lower()}")
+            
+            # 否则当作用户名（实时查询）
             return Command(action="info", target=rest)
         
         # 默认返回帮助
@@ -100,21 +108,38 @@ class CommandHandler:
             return self.formatter.format_help()
         
         if command.action == "info":
-            # 历史查询
-            if command.time_range:
-                records = self.recorder.query(command.time_range)
-                return self.formatter.format_history(records, command.time_range)
+            # 组合命令: /info <用户名> <时间范围>
+            if command.target and command.time_range:
+                # 检查 recorder 是否有 query_filtered 方法
+                if hasattr(self.recorder, 'query_filtered'):
+                    records, stats = self.recorder.query_filtered(
+                        command.time_range, command.target
+                    )
+                    return self.formatter.format_history_compact(
+                        records, stats, command.time_range, command.target
+                    )
+                else:
+                    return "❌ 服务器暂不支持历史查询"
             
-            # 实时查询
+            # 仅时间范围: /info 3d
+            if command.time_range:
+                if hasattr(self.recorder, 'query_filtered'):
+                    records, stats = self.recorder.query_filtered(command.time_range)
+                    return self.formatter.format_history_compact(
+                        records, stats, command.time_range
+                    )
+                else:
+                    records = self.recorder.query(command.time_range)
+                    return self.formatter.format_history(records, command.time_range)
+            
+            # 实时查询: /info 或 /info <用户名>
             if command.target:
-                # 指定用户
                 data = self.collector.collect()
                 user_data = data.get(command.target)
                 if user_data is None:
                     return "❌ 用户不存在或未在线"
                 return self.formatter.format_realtime({command.target: user_data})
             else:
-                # 所有用户
                 data = self.collector.collect()
                 return self.formatter.format_realtime(data)
         

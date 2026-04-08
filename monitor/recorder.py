@@ -5,7 +5,7 @@
 
 import sqlite3
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import os
 
 
@@ -130,6 +130,104 @@ class Recorder:
             })
         
         return records
+    
+    def query_filtered(self, time_range: str, username: Optional[str] = None) -> Tuple[List[Dict], Dict]:
+        """查询历史数据（过滤0值，只保留有显存占用的记录）
+        
+        Args:
+            time_range: 时间范围，如 "1d", "7d", "2w", "1m"
+            username: 可选，指定用户名
+            
+        Returns:
+            (过滤后的记录列表, 统计信息Dict)
+            统计信息: {
+                "total": int,      # 总记录数
+                "valid": int,      # 有效记录数
+                "filtered": int,   # 被过滤的0值记录数
+                "cpu_peak": float, # CPU峰值
+                "mem_peak": float, # 内存峰值
+                "gpu_peak": float  # GPU峰值
+            }
+        """
+        delta = self._parse_time_range(time_range)
+        if delta is None:
+            return [], {"total": 0, "valid": 0, "filtered": 0, "cpu_peak": 0, "mem_peak": 0, "gpu_peak": 0}
+        
+        start_time = datetime.now() - delta
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 查询总记录数
+        if username:
+            cursor.execute("""
+                SELECT COUNT(*) FROM resource_history
+                WHERE timestamp >= ? AND username = ?
+            """, (start_time.isoformat(), username))
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM resource_history
+                WHERE timestamp >= ?
+            """, (start_time.isoformat(),))
+        total = cursor.fetchone()[0] or 0
+        
+        # 查询过滤后的记录（gpu_memory_mb > 0）并计算峰值
+        if username:
+            cursor.execute("""
+                SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
+                       cpu_percent, memory_percent,
+                       MAX(cpu_percent) as cpu_peak,
+                       MAX(memory_percent) as mem_peak,
+                       MAX(gpu_percent) as gpu_peak
+                FROM resource_history
+                WHERE timestamp >= ? AND username = ? AND gpu_memory_mb > 0
+                GROUP BY timestamp, username
+                ORDER BY timestamp DESC
+            """, (start_time.isoformat(), username))
+        else:
+            cursor.execute("""
+                SELECT timestamp, username, gpu_percent, gpu_memory_mb, 
+                       cpu_percent, memory_percent,
+                       MAX(cpu_percent) as cpu_peak,
+                       MAX(memory_percent) as mem_peak,
+                       MAX(gpu_percent) as gpu_peak
+                FROM resource_history
+                WHERE timestamp >= ? AND gpu_memory_mb > 0
+                GROUP BY timestamp, username
+                ORDER BY timestamp DESC
+            """, (start_time.isoformat(),))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        records = []
+        cpu_peak = 0.0
+        mem_peak = 0.0
+        gpu_peak = 0.0
+        
+        for row in rows:
+            records.append({
+                "timestamp": row[0],
+                "username": row[1],
+                "gpu_percent": row[2],
+                "gpu_memory_mb": row[3],
+                "cpu_percent": row[4],
+                "memory_percent": row[5]
+            })
+            cpu_peak = max(cpu_peak, row[4] or 0)
+            mem_peak = max(mem_peak, row[5] or 0)
+            gpu_peak = max(gpu_peak, row[2] or 0)
+        
+        stats = {
+            "total": total,
+            "valid": len(records),
+            "filtered": total - len(records),
+            "cpu_peak": cpu_peak,
+            "mem_peak": mem_peak,
+            "gpu_peak": gpu_peak
+        }
+        
+        return records, stats
     
     def _parse_time_range(self, time_range: str) -> Optional[timedelta]:
         """解析时间范围字符串
