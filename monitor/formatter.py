@@ -230,8 +230,130 @@ class Formatter:
         lines.append("  /top gpu/mem/cpu  - 按GPU/显存/CPU排序")
         lines.append("  /users [天数]      - 查看服务器用户列表")
         lines.append("")
+        lines.append("📌 SSH连接记录:")
+        lines.append("  /ssh <时间>        - 查看SSH连接记录 (如: /ssh 1d)")
+        lines.append("  /ssh <时间> <用户> - 按用户过滤 (如: /ssh 7d root)")
+        lines.append("  /ssh <时间> <IP>   - 按IP过滤 (如: /ssh 7d 192.168.1.1)")
+        lines.append("  /ssh <时间> <页码> - 分页翻页 (如: /ssh 1d 2)")
+        lines.append("")
         lines.append("💡 提示: 输入 @机器人 + 命令")
         lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        return "\n".join(lines)
+    
+    def format_ssh(self, records: List[Dict], stats: Dict, time_range: str,
+                   page: int = 1, page_size: int = 10) -> str:
+        """格式化SSH连接记录（带聚合统计）
+        
+        Args:
+            records: 聚合后的记录列表 [{ip, username, success_count, fail_count}, ...]
+            stats: 统计信息
+            time_range: 查询的时间范围
+            page: 当前页码
+            page_size: 每页条数
+            
+        Returns:
+            格式化的SSH记录文本
+        """
+        if not records:
+            return f"📭 暂无 {time_range} 的SSH连接记录"
+        
+        lines = []
+        
+        # 获取分页信息
+        total_pages = stats.get('total_pages', 1)
+        current_page = stats.get('current_page', page)
+        
+        # 页码导航头
+        if total_pages > 1:
+            lines.append(f"📄 第{current_page}页/共{total_pages}页")
+            if current_page < total_pages:
+                cmd_hint = f"/ssh {time_range} {current_page + 1}"
+                lines.append(f"还有{total_pages - current_page}页数据，输入 {cmd_hint} 查看下一页")
+            else:
+                lines.append("（最后一页）")
+            lines.append("")
+        
+        # 标题行
+        lines.append(f"📊 过去 {time_range} 的SSH连接记录")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        # 统计行
+        total_raw = stats.get('total_raw', 0)
+        success_total = stats.get('success_total', 0)
+        fail_total = stats.get('fail_total', 0)
+        lines.append(f"统计: {stats['total_agg']}条 / {total_raw}条总")
+        lines.append(f"成功: {success_total}次  |  失败: {fail_total}次")
+        lines.append("")
+        
+        # 数据行
+        for record in records[:page_size]:
+            ip = record.get('ip', '')
+            username = record.get('username', '')
+            success_count = record.get('success_count', 0)
+            fail_count = record.get('fail_count', 0)
+            
+            # 格式化次数（数字右对齐）
+            line = f"{ip:<16} {username:<8} 成功: {success_count:>3}次  失败: {fail_count:>3}次"
+            lines.append(line)
+        
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"提示: /ssh {time_range} {username} 查看{username}的详细记录")
+        
+        return "\n".join(lines)
+    
+    def format_ssh_detail(self, records: List[Dict], stats: Dict, 
+                          time_range: str, username: str, ip: str,
+                          page: int = 1, page_size: int = 10) -> str:
+        """格式化SSH详细记录
+        
+        Args:
+            records: 详细记录列表
+            stats: 统计信息
+            time_range: 查询的时间范围
+            username: 用户名
+            ip: IP地址
+            page: 当前页码
+            page_size: 每页条数
+            
+        Returns:
+            格式化的详细记录文本
+        """
+        if not records:
+            return f"📭 暂无 {time_range} 的SSH记录"
+        
+        lines = []
+        
+        # 获取分页信息
+        total_pages = stats.get('total_pages', 1)
+        current_page = stats.get('current_page', page)
+        
+        # 页码导航头
+        if total_pages > 1:
+            lines.append(f"📄 第{current_page}页/共{total_pages}页")
+            if current_page < total_pages:
+                cmd_hint = f"/ssh {time_range} {username}@{ip} {current_page + 1}"
+                lines.append(f"还有{total_pages - current_page}页数据，输入 {cmd_hint} 查看下一页")
+            else:
+                lines.append("（最后一页）")
+            lines.append("")
+        
+        # 标题行
+        lines.append(f"📋 {username}@{ip} 的SSH连接详情")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"时间                | 结果")
+        lines.append("-" * 30)
+        
+        # 数据行
+        for record in records[:page_size]:
+            timestamp = record.get('timestamp', '')[:16]
+            success = record.get('success', False)
+            result = "✅ 成功" if success else "❌ 失败"
+            line = f"{timestamp:<18} {result}"
+            lines.append(line)
+        
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"共 {stats['total']} 条记录")
         
         return "\n".join(lines)
     

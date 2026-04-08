@@ -1,6 +1,6 @@
 # 🗂️ WIKI Index（全局摘要索引）
 
-> 🔄 最后同步：2026-04-08 20:40 | 🤖 维护Agent：v2.8 | 📦 总摘要数：12 + 计划文档14份
+> 🔄 最后同步：2026-04-08 20:45 | 🤖 维护Agent：v2.9 | 📦 总摘要数：13 + 计划文档15份
 
 ## 📊 模块总览
 
@@ -16,6 +16,7 @@
 | `abs_013` | tech/logging | [🔗](./abstract/tech/logging-system.md) | 日志系统：控制台+文件双输出 | 04-08 |
 | `abs_plan09`~`abs_plan10` | dev_progress | [🔗](./abstract/dev_progress/) | ✅ PLAN-09~10完成 | 04-08 |
 | `abs_014` | requirement/pagination | [🔗](./abstract/requirement/pagination.md) | 历史查询翻页功能需求 | 04-08 |
+| `abs_015` | requirement/ssh_log | [🔗](./abstract/requirement/ssh-log-feature.md) | SSH连接记录功能需求 | 04-08 |
 
 ## 📐 开发计划文档
 
@@ -32,6 +33,7 @@
 | PLAN-012 | 历史查询过滤条件修复 | ✅ 完成 | [🔗](./plan/12-history-filter-fix.md) |
 | PLAN-013 | 日志系统添加 | ✅ 完成 | [🔗](./plan/13-logging-system-plan.md) |
 | PLAN-014 | 历史查询翻页功能 | ✅ 完成 | [🔗](./plan/14-pagination-feature-plan.md) |
+| PLAN-015 | SSH连接记录功能 | 🔄 开发中 | [🔗](./plan/15-ssh-connection-log-feature-plan.md) |
 
 ## ✅ 开发待办（状态汇总）
 
@@ -46,6 +48,15 @@
 
 ## 📝 全局更新日志（近10条）
 
+- `04-08 21:10`: 🔄 **PLAN-015开发中：SSH连接记录功能**
+  - 新增模块：`monitor/ssh_recorder.py`
+  - 修改：`config.yaml`, `bot/handler.py`, `monitor/formatter.py`, `main.py`
+  - 测试脚本：`test_ssh_recorder.py`
+  - 权限问题已解决（adm组）
+- `04-08 20:45`: 📋 **新增需求+计划：SSH连接记录功能**
+  - 需求：`wiki/request/req-ssh-connection-log-feature.md`
+  - 计划：`wiki/plan/15-ssh-connection-log-feature-plan.md`
+  - 状态：待用户确认执行
 - `04-08 20:40`: ✅ **PLAN-014完成：历史查询翻页功能**
   - 新增 `/info 5d [页码]` 等翻页命令支持
   - 每页10条记录，可配置

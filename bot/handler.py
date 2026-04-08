@@ -14,16 +14,19 @@ if TYPE_CHECKING:
     from monitor.collector import Collector
     from monitor.recorder import Recorder
     from monitor.formatter import Formatter
+    from monitor.ssh_recorder import SSHRecorder
 
 
 @dataclass
 class Command:
     """命令数据结构（扩展版）"""
-    action: str           # "info", "help", "stats", "top", "users"
+    action: str           # "info", "help", "stats", "top", "users", "ssh"
     target: Optional[str] = None  # 用户名 或 None
     time_range: Optional[str] = None  # "1d", "1w", "1m", None
     sort_by: Optional[str] = None  # "gpu", "mem", "cpu", None (用于top命令)
     page: int = 1  # 页码，默认第1页
+    # SSH专用字段
+    ssh_filter: Optional[str] = None  # SSH过滤条件（用户、IP、或 user@ip 格式）
 
 
 class CommandHandler:
@@ -42,6 +45,7 @@ class CommandHandler:
         collector: "Collector",
         recorder: "Recorder",
         formatter: "Formatter",
+        ssh_recorder: Optional["SSHRecorder"] = None,
         page_size: int = 10
     ):
         """初始化命令处理器
@@ -50,11 +54,13 @@ class CommandHandler:
             collector: 数据采集器
             recorder: 历史记录管理器
             formatter: 格式化器
+            ssh_recorder: SSH记录管理器（可选）
             page_size: 每页默认条数
         """
         self.collector = collector
         self.recorder = recorder
         self.formatter = formatter
+        self.ssh_recorder = ssh_recorder
         self.page_size = page_size
         # 命令日志记录器
         self.command_logger = setup_logger("command", log_dir="logs")
@@ -159,6 +165,46 @@ class CommandHandler:
                 return Command(action="users", time_range=str(days), page=page)
             return Command(action="help", page=page)
         
+        # 解析 /ssh 命令
+        if text.startswith("/ssh"):
+            rest = text[4:].strip()
+            
+            if not rest:
+                # /ssh 默认7天
+                return Command(action="ssh", time_range="7d", page=page)
+            
+            # 时间范围模式: /ssh <数字>+d/w/m
+            time_pattern = r"^(\d+)([dDwWmM])$"
+            time_match = re.match(time_pattern, rest)
+            if time_match:
+                num, unit = time_match.groups()
+                return Command(action="ssh", time_range=f"{num}{unit.lower()}", page=page)
+            
+            # 组合模式: /ssh <时间> <过滤条件>
+            # 匹配 "数字+单位 + 其他" 的格式
+            combo_pattern = r"^(\d+)([dDwWmM])\s+(.+)$"
+            combo_match = re.match(combo_pattern, rest)
+            if combo_match:
+                num, unit, filter_str = combo_match.groups()
+                time_range = f"{num}{unit.lower()}"
+                
+                # 解析过滤条件
+                # 格式: <用户名> 或 <IP> 或 <用户名>@<IP>
+                if '@' in filter_str:
+                    # user@ip 格式
+                    parts = filter_str.split('@', 1)
+                    username, ip = parts[0], parts[1]
+                    return Command(action="ssh", time_range=time_range, 
+                                   ssh_filter=filter_str, page=page)
+                else:
+                    # 可能是用户名或IP
+                    return Command(action="ssh", time_range=time_range,
+                                   ssh_filter=filter_str, page=page)
+            
+            # 纯过滤条件（无时间，默认7天）
+            return Command(action="ssh", time_range="7d", 
+                          ssh_filter=rest, page=page)
+        
         # 默认返回帮助
         return Command(action="help", page=page)
     
@@ -250,6 +296,44 @@ class CommandHandler:
                     return self.formatter.format_users(users, command.time_range)
                 else:
                     return "❌ 服务器暂不支持用户查询"
+            
+            # /ssh 命令 - SSH连接记录
+            if command.action == "ssh":
+                if not self.ssh_recorder:
+                    return "❌ 服务器暂不支持SSH记录查询"
+                
+                # 解析过滤条件
+                username_filter = None
+                ip_filter = None
+                
+                if command.ssh_filter:
+                    ssh_filter = command.ssh_filter.strip()
+                    
+                    # 检查是否包含 @ (user@ip 格式)
+                    if '@' in ssh_filter:
+                        parts = ssh_filter.split('@', 1)
+                        username_filter, ip_filter = parts[0], parts[1]
+                    else:
+                        # 判断是用户名还是IP
+                        # 简单判断：如果包含.认为是IP，否则是用户名
+                        if '.' in ssh_filter and ssh_filter.replace('.', '').replace(':', '').isdigit():
+                            ip_filter = ssh_filter
+                        else:
+                            username_filter = ssh_filter
+                
+                # 查询记录
+                records, stats = self.ssh_recorder.query(
+                    command.time_range,
+                    username=username_filter,
+                    ip_filter=ip_filter,
+                    page=command.page,
+                    page_size=self.page_size
+                )
+                
+                return self.formatter.format_ssh(
+                    records, stats, command.time_range,
+                    page=command.page, page_size=self.page_size
+                )
             
             return "❌ 未知命令，请使用 /help 查看帮助"
             

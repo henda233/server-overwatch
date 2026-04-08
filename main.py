@@ -23,6 +23,7 @@ from bot.handler import CommandHandler
 from monitor.collector import Collector
 from monitor.recorder import Recorder
 from monitor.formatter import Formatter
+from monitor.ssh_recorder import SSHRecorder
 from utils.config import Config
 from utils.logger import setup_logger
 
@@ -119,7 +120,8 @@ class PeriodicCollector:
         collector: Collector,
         interval: int,
         retention_days: int = 30,
-        cleanup_interval: int = 86400  # 默认每天清理一次
+        cleanup_interval: int = 86400,  # 默认每天清理一次
+        ssh_recorder: SSHRecorder = None
     ):
         """初始化定时采集器
         
@@ -129,9 +131,11 @@ class PeriodicCollector:
             interval: 采集间隔（秒）
             retention_days: 数据保留天数，默认30天
             cleanup_interval: 清理间隔（秒），默认86400秒（1天）
+            ssh_recorder: SSH记录管理器（可选）
         """
         self.recorder = recorder
         self.collector = collector
+        self.ssh_recorder = ssh_recorder
         self.interval = interval
         self.retention_days = retention_days
         self.cleanup_interval = cleanup_interval
@@ -157,11 +161,21 @@ class PeriodicCollector:
     def _cleanup_old_records(self):
         """清理过期数据"""
         try:
+            # 清理资源历史
             deleted = self.recorder.cleanup(self.retention_days)
             if deleted > 0:
                 logger.info(f"清理过期记录: {deleted} 条")
             stats = self.recorder.get_stats()
-            logger.info(f"当前数据库记录数: {stats['total_records']}")
+            logger.info(f"当前资源历史记录数: {stats['total_records']}")
+            
+            # 清理SSH历史（如果存在）
+            if self.ssh_recorder:
+                ssh_deleted = self.ssh_recorder.cleanup()
+                if ssh_deleted > 0:
+                    logger.info(f"清理过期SSH记录: {ssh_deleted} 条")
+                ssh_stats = self.ssh_recorder.get_stats()
+                logger.info(f"当前SSH记录数: {ssh_stats['total_records']}")
+                
         except Exception as e:
             logger.error(f"清理过期数据失败: {e}")
     
@@ -179,6 +193,15 @@ class PeriodicCollector:
                     self.recorder.save(timestamp, username, user_data)
                 
                 logger.info(f"采集完成: {len(data)} 个用户/系统记录")
+                
+                # 采集SSH连接记录
+                if self.ssh_recorder:
+                    try:
+                        ssh_count = self.ssh_recorder.collect()
+                        if ssh_count > 0:
+                            logger.info(f"SSH记录采集: {ssh_count} 条")
+                    except Exception as e:
+                        logger.warning(f"SSH记录采集失败: {e}")
                 
                 # 检查是否需要清理
                 elapsed += self.interval
@@ -217,14 +240,26 @@ def main():
     collector = Collector()
     recorder = Recorder()
     formatter = Formatter()
-    handler = CommandHandler(collector, recorder, formatter, page_size=config.page_size)
+    
+    # 初始化SSH记录器（从配置读取）
+    ssh_config = config.ssh_monitor if hasattr(config, 'ssh_monitor') else {}
+    ssh_recorder = SSHRecorder(
+        db_path=ssh_config.get('db_path', 'ssh_history.db'),
+        log_path=ssh_config.get('log_path', '/var/log/auth.log'),
+        retention_days=ssh_config.get('retention_days', 90)
+    )
+    
+    handler = CommandHandler(collector, recorder, formatter, 
+                           ssh_recorder=ssh_recorder, 
+                           page_size=config.page_size)
     
     # 启动定时采集
     periodic = PeriodicCollector(
         recorder,
         collector,
         config.interval,
-        retention_days=config.retention_days
+        retention_days=config.retention_days,
+        ssh_recorder=ssh_recorder
     )
     periodic.start()
     

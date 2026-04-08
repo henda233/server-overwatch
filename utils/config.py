@@ -91,3 +91,12 @@ class Config:
     def page_size(self) -> int:
         """获取每页默认条数"""
         return self.get("pagination.page_size", 10)
+    
+    @property
+    def ssh_monitor(self) -> dict:
+        """获取SSH监控配置"""
+        return self.get("ssh_monitor", {
+            "log_path": "/var/log/auth.log",
+            "retention_days": 90,
+            "page_size": 10
+        })
