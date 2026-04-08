@@ -13,6 +13,7 @@
 | `abs_005` | requirement/core | [🔗](./abstract/requirement/core.md) | 功能需求+命令设计 | 04-07 |
 | `abs_phase1`~`abs_phase2` | dev_progress | [🔗](./abstract/dev_progress/) | ✅ 阶段1-2完成 | 04-07 |
 | `abs_006` | config/env | [🔗](./abstract/config/env.md) | 开发环境配置 | 04-07 |
+| `abs_013` | tech/logging | [🔗](./abstract/tech/logging-system.md) | 日志系统：控制台+文件双输出 | 04-08 |
 | `abs_plan09`~`abs_plan10` | dev_progress | [🔗](./abstract/dev_progress/) | ✅ PLAN-09~10完成 | 04-08 |
 
 ## 📐 开发计划文档
@@ -28,6 +29,7 @@
 | PLAN-010 | QQ机器人命令扩展 | ✅ | [🔗](./plan/10-command-extension.md) |
 | PLAN-011 | 阶段4: 服务器部署 | ✅ 完成 | [🔗](./plan/11-phase4-deployment.md) |
 | PLAN-012 | 历史查询过滤条件修复 | ✅ 完成 | [🔗](./plan/12-history-filter-fix.md) |
+| PLAN-013 | 日志系统添加 | ✅ 完成 | [🔗](./plan/13-logging-system-plan.md) |
 
 ## ✅ 开发待办（状态汇总）
 

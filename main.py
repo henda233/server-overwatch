@@ -24,14 +24,11 @@ from monitor.collector import Collector
 from monitor.recorder import Recorder
 from monitor.formatter import Formatter
 from utils.config import Config
+from utils.logger import setup_logger
 
 
-# 全局日志配置
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# 全局日志配置：控制台 + 文件（按日期分割）
+logger = setup_logger("server_overwatch", log_dir="logs")
 
 
 class BotClient(Client):
@@ -59,10 +56,11 @@ class BotClient(Client):
     async def on_c2c_message_create(self, message: C2CMessage):
         """处理C2C私聊消息"""
         try:
+            user_id = message.author.user_openid
             logger.info(f"收到C2C私聊: {message.content}")
-            reply = await self.handler.handle(message.content)
+            reply = await self.handler.handle(message.content, user_id=user_id)
             await message._api.post_c2c_message(
-                openid=message.author.user_openid,
+                openid=user_id,
                 msg_type=0,
                 msg_id=message.id,
                 content=reply
@@ -74,10 +72,11 @@ class BotClient(Client):
     async def on_direct_message_create(self, message: DirectMessage):
         """处理DMS私信"""
         try:
+            user_id = message.guild_id
             logger.info(f"收到DMS私信: {message.content}")
-            reply = await self.handler.handle(message.content)
+            reply = await self.handler.handle(message.content, user_id=user_id)
             await self.api.post_dms(
-                guild_id=message.guild_id,
+                guild_id=user_id,
                 content=reply,
                 msg_id=message.id
             )
@@ -92,10 +91,11 @@ class BotClient(Client):
             message: 接收到的消息对象
         """
         try:
+            user_id = message.author.user_openid
             logger.info(f"收到消息: {message.content}")
             
             # 处理命令
-            reply = await self.handler.handle(message.content)
+            reply = await self.handler.handle(message.content, user_id=user_id)
             
             # 回复消息
             await message.reply(content=reply)

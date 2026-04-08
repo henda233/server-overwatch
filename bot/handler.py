@@ -6,6 +6,9 @@ QQ机器人命令处理模块
 from typing import TYPE_CHECKING, Optional
 from dataclasses import dataclass
 import re
+import time
+
+from utils.logger import setup_logger
 
 if TYPE_CHECKING:
     from monitor.collector import Collector
@@ -49,6 +52,8 @@ class CommandHandler:
         self.collector = collector
         self.recorder = recorder
         self.formatter = formatter
+        # 命令日志记录器
+        self.command_logger = setup_logger("command", log_dir="logs")
     
     def parse(self, text: str) -> Command:
         """解析命令文本
@@ -143,85 +148,102 @@ class CommandHandler:
         # 默认返回帮助
         return Command(action="help")
     
-    async def handle(self, message_text: str) -> str:
+    async def handle(self, message_text: str, user_id: str = "unknown") -> str:
         """处理消息
         
         Args:
             message_text: 消息文本
+            user_id: 用户标识（用于日志记录）
             
         Returns:
             回复内容
         """
+        start_time = time.time()
         command = self.parse(message_text)
         
-        if command.action == "help":
-            return self.formatter.format_help()
-        
-        if command.action == "info":
-            # 组合命令: /info <用户名> <时间范围>
-            if command.target and command.time_range:
-                # 检查 recorder 是否有 query_filtered 方法
-                if hasattr(self.recorder, 'query_filtered'):
-                    records, stats = self.recorder.query_filtered(
-                        command.time_range, command.target
-                    )
-                    return self.formatter.format_history_compact(
-                        records, stats, command.time_range, command.target
-                    )
-                else:
-                    return "❌ 服务器暂不支持历史查询"
+        try:
+            if command.action == "help":
+                return self.formatter.format_help()
             
-            # 仅时间范围: /info 3d
-            if command.time_range:
-                if hasattr(self.recorder, 'query_filtered'):
-                    records, stats = self.recorder.query_filtered(command.time_range)
-                    return self.formatter.format_history_compact(
-                        records, stats, command.time_range
-                    )
+            if command.action == "info":
+                # 组合命令: /info <用户名> <时间范围>
+                if command.target and command.time_range:
+                    # 检查 recorder 是否有 query_filtered 方法
+                    if hasattr(self.recorder, 'query_filtered'):
+                        records, stats = self.recorder.query_filtered(
+                            command.time_range, command.target
+                        )
+                        return self.formatter.format_history_compact(
+                            records, stats, command.time_range, command.target
+                        )
+                    else:
+                        return "❌ 服务器暂不支持历史查询"
+                
+                # 仅时间范围: /info 3d
+                if command.time_range:
+                    if hasattr(self.recorder, 'query_filtered'):
+                        records, stats = self.recorder.query_filtered(command.time_range)
+                        return self.formatter.format_history_compact(
+                            records, stats, command.time_range
+                        )
+                    else:
+                        records = self.recorder.query(command.time_range)
+                        return self.formatter.format_history(records, command.time_range)
+                
+                # 实时查询: /info 或 /info <用户名>
+                if command.target:
+                    data = self.collector.collect()
+                    user_data = data.get(command.target)
+                    if user_data is None:
+                        return "❌ 用户不存在或未在线"
+                    return self.formatter.format_realtime({command.target: user_data})
                 else:
-                    records = self.recorder.query(command.time_range)
-                    return self.formatter.format_history(records, command.time_range)
+                    data = self.collector.collect()
+                    return self.formatter.format_realtime(data)
             
-            # 实时查询: /info 或 /info <用户名>
-            if command.target:
+            # /stats 命令 - 统计摘要
+            if command.action == "stats":
+                if hasattr(self.recorder, 'get_all_users_stats'):
+                    stats = self.recorder.get_all_users_stats(command.time_range)
+                    return self.formatter.format_stats(stats, command.time_range)
+                else:
+                    return "❌ 服务器暂不支持统计查询"
+            
+            # /top 命令 - 排行榜
+            if command.action == "top":
+                # 先获取实时数据排序
                 data = self.collector.collect()
-                user_data = data.get(command.target)
-                if user_data is None:
-                    return "❌ 用户不存在或未在线"
-                return self.formatter.format_realtime({command.target: user_data})
-            else:
-                data = self.collector.collect()
-                return self.formatter.format_realtime(data)
-        
-        # /stats 命令 - 统计摘要
-        if command.action == "stats":
-            if hasattr(self.recorder, 'get_all_users_stats'):
-                stats = self.recorder.get_all_users_stats(command.time_range)
-                return self.formatter.format_stats(stats, command.time_range)
-            else:
-                return "❌ 服务器暂不支持统计查询"
-        
-        # /top 命令 - 排行榜
-        if command.action == "top":
-            # 先获取实时数据排序
-            data = self.collector.collect()
-            if not data:
-                return "📭 当前没有在线用户"
-            # 按指定字段排序
-            sorted_users = sorted(
-                data.items(),
-                key=lambda x: x[1].get(f"{command.sort_by}_percent" if command.sort_by != 'mem' else 'gpu_memory_mb', 0),
-                reverse=True
+                if not data:
+                    return "📭 当前没有在线用户"
+                # 按指定字段排序
+                sorted_users = sorted(
+                    data.items(),
+                    key=lambda x: x[1].get(f"{command.sort_by}_percent" if command.sort_by != 'mem' else 'gpu_memory_mb', 0),
+                    reverse=True
+                )
+                sorted_data = {k: v for k, v in sorted_users}
+                return self.formatter.format_top(sorted_data, command.sort_by)
+            
+            # /users 命令 - 用户列表
+            if command.action == "users":
+                if hasattr(self.recorder, 'get_all_users'):
+                    users = self.recorder.get_all_users(int(command.time_range))
+                    return self.formatter.format_users(users, command.time_range)
+                else:
+                    return "❌ 服务器暂不支持用户查询"
+            
+            return "❌ 未知命令，请使用 /help 查看帮助"
+            
+        except Exception as e:
+            # 错误时记录异常堆栈
+            self.command_logger.error(
+                f"命令失败 | 用户: {user_id} | 命令: {message_text} | 错误: {e}",
+                exc_info=True
             )
-            sorted_data = {k: v for k, v in sorted_users}
-            return self.formatter.format_top(sorted_data, command.sort_by)
-        
-        # /users 命令 - 用户列表
-        if command.action == "users":
-            if hasattr(self.recorder, 'get_all_users'):
-                users = self.recorder.get_all_users(int(command.time_range))
-                return self.formatter.format_users(users, command.time_range)
-            else:
-                return "❌ 服务器暂不支持用户查询"
-        
-        return "❌ 未知命令，请使用 /help 查看帮助"
+            raise
+        finally:
+            # 记录命令执行日志
+            elapsed = (time.time() - start_time) * 1000
+            self.command_logger.info(
+                f"命令调用 | 用户: {user_id} | 命令: {message_text} | 耗时: {elapsed:.0f}ms"
+            )
