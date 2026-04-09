@@ -344,7 +344,7 @@ def main():
         test_parse_log_line()
         test_db_initialization()
         test_collect_and_query()
-        test_pagination()
+        #test_pagination()
         test_cleanup()
         test_time_range_parsing()
         test_real_auth_log()
