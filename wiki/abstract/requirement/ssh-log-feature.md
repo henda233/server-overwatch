@@ -2,10 +2,11 @@
 abstract_id: abs_015
 source_contents:
   - "server-overwatch::/wiki/request/req-ssh-connection-log-feature.md"
+  - "server-overwatch::/monitor/ssh_recorder.py"
 dependencies:
   - "abs_005" (requirement/core.md)
 created_at: 2026-04-08 20:45:00
-updated_at: 2026-04-08 20:45:00
+updated_at: 2026-04-09 10:50:00
 audit_status: pending
 ---
 # 📖 摘要：SSH连接记录功能需求
@@ -23,6 +24,13 @@ audit_status: pending
 | 数据库 | `ssh_history.db` |
 | 保留周期 | 90天 |
 | 采集方式 | 定时采集（每分钟） |
+
+### ✅ 已解决的技术问题
+- **日志格式兼容**：支持两种auth.log格式
+  - 传统syslog：`Apr  8 20:30:00 hostname sshd[...]`
+  - ISO 8601：`2026-04-09T10:59:28.898309+08:00 hostname sshd[...]`
+- **时区格式兼容**：支持 `+0800` 和 `+08:00` 两种时区格式
+- **权限问题**：用户需加入 `adm` 组读取auth.log
 
 ### 命令格式
 | 命令 | 说明 |

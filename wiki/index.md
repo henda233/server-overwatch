@@ -33,7 +33,7 @@
 | PLAN-012 | 历史查询过滤条件修复 | ✅ 完成 | [🔗](./plan/12-history-filter-fix.md) |
 | PLAN-013 | 日志系统添加 | ✅ 完成 | [🔗](./plan/13-logging-system-plan.md) |
 | PLAN-014 | 历史查询翻页功能 | ✅ 完成 | [🔗](./plan/14-pagination-feature-plan.md) |
-| PLAN-015 | SSH连接记录功能 | 🔄 开发中 | [🔗](./plan/15-ssh-connection-log-feature-plan.md) |
+| PLAN-015 | SSH连接记录功能 | ✅ 完成 | [🔗](./plan/15-ssh-connection-log-feature-plan.md) |
 
 ## ✅ 开发待办（状态汇总）
 
@@ -48,6 +48,9 @@
 
 ## 📝 全局更新日志（近10条）
 
+- `04-09 10:50`: ✅ **PLAN-015完成：SSH连接记录功能**
+  - 问题修复：正则表达式支持ISO 8601格式和 `+08:00` 时区格式
+  - 测试验证通过，可正常采集auth.log中的SSH登录记录
 - `04-08 21:10`: 🔄 **PLAN-015开发中：SSH连接记录功能**
   - 新增模块：`monitor/ssh_recorder.py`
   - 修改：`config.yaml`, `bot/handler.py`, `monitor/formatter.py`, `main.py`

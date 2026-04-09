@@ -3,6 +3,6 @@
 botpy/
 config.yaml
 AGENTS.md
-history.db
+*.db
 __pycache__/
 *.log
