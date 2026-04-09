@@ -24,14 +24,31 @@ class SSHRecorder:
     - 支持90天数据自动清理
     """
     
-    # SSH日志正则表达式
-    # 成功登录: Accepted password for <user> from <ip>
-    # 失败登录: Failed password for <user> from <ip>
+    # SSH日志正则表达式（支持两种格式）
+    # 格式1（传统syslog）: Apr  8 20:30:00 hostname sshd[12345]: Accepted password for user from ip
+    # 格式2（ISO 8601）: 2026-04-09T10:59:28.898309+08:00 hostname sshd[5867]: Accepted password for user from ip
+    
+    # 成功登录
     PATTERN_ACCEPTED = re.compile(
-        r'(?P<month>\w+)\s+(?P<day>\d+)\s+(?P<time>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+Accepted password for (?P<user>\S+) from (?P<ip>\S+)'
+        r'(?:'
+        # 格式1: 传统syslog
+        r'(?P<month1>\w+)\s+(?P<day1>\d+)\s+(?P<time1>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+'
+        # 格式2: ISO 8601
+        r'|'
+        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{4}\s+\S+\s+sshd\[\d+\]:\s+'
+        r')'
+        r'Accepted password for (?P<user>\S+) from (?P<ip>\S+)'
     )
+    # 失败登录
     PATTERN_FAILED = re.compile(
-        r'(?P<month>\w+)\s+(?P<day>\d+)\s+(?P<time>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+Failed password for (?P<user>\S+) from (?P<ip>\S+)'
+        r'(?:'
+        # 格式1: 传统syslog
+        r'(?P<month1>\w+)\s+(?P<day1>\d+)\s+(?P<time1>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+'
+        # 格式2: ISO 8601
+        r'|'
+        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{4}\s+\S+\s+sshd\[\d+\]:\s+'
+        r')'
+        r'Failed password for (?P<user>\S+) from (?P<ip>\S+)'
     )
     
     def __init__(self, db_path: str = "ssh_history.db", log_path: str = "/var/log/auth.log", 
@@ -124,21 +141,37 @@ class SSHRecorder:
         return None
     
     def _build_record(self, match: re.Match, success: bool) -> Dict:
-        """构建记录Dict"""
-        # auth.log 时间格式: Apr  8 20:30:00
-        month = match.group('month')
-        day = match.group('day')
-        time_str = match.group('time')
+        """构建记录Dict
         
-        # 获取当前年份
+        支持两种auth.log时间格式：
+        1. 传统syslog: Apr  8 20:30:00
+        2. ISO 8601: 2026-04-09T10:59:28（通过捕获的time2获取时间部分）
+        """
         year = datetime.now().year
         
-        # 解析时间（处理单双日格式）
-        try:
-            timestamp = datetime.strptime(f"{year} {month} {day} {time_str}", "%Y %b %d %H:%M:%S")
-        except ValueError:
-            # 可能是日期格式问题，尝试其他方式
-            timestamp = datetime.now()
+        # 尝试从传统syslog格式获取时间 (group 'month', 'day', 'time')
+        month = match.group('month1')
+        day = match.group('day1')
+        time_str = match.group('time1')
+        
+        if month is None:
+            # ISO 8601格式，只有时间部分被捕获
+            time_str = match.group('time2')
+            # 使用当前日期（ISO格式不包含日期，需要从文件或其他方式获取）
+            # 这里使用datetime.now()的日期部分
+            now = datetime.now()
+            timestamp = now.replace(
+                hour=int(time_str.split(':')[0]),
+                minute=int(time_str.split(':')[1]),
+                second=int(time_str.split(':')[2]),
+                microsecond=0
+            )
+        else:
+            # 解析传统syslog格式时间
+            try:
+                timestamp = datetime.strptime(f"{year} {month} {day} {time_str}", "%Y %b %d %H:%M:%S")
+            except ValueError:
+                timestamp = datetime.now()
         
         return {
             "timestamp": timestamp,
