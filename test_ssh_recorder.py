@@ -191,9 +191,10 @@ def test_pagination():
         recorder = SSHRecorder(db_path=db_path, log_path=log_path)
         recorder.collect()
         
-        # 测试分页（每页10条，25条数据=3页聚合记录）
+        # 测试分页（每页10条，25条原始记录=15个聚合组合=2页）
+        # user循环3个，IP循环5个 → 3×5=15个不同组合
         records, stats = recorder.query("7d", page=1, page_size=10)
-        assert stats['total_pages'] == 3, f"总页数错误: {stats['total_pages']}"
+        assert stats['total_pages'] == 2, f"总页数错误: {stats['total_pages']}"
         assert stats['current_page'] == 1, f"当前页错误: {stats['current_page']}"
         print(f"  ✅ 第1页: {len(records)}条 / 共{stats['total_pages']}页")
         
@@ -203,8 +204,8 @@ def test_pagination():
         
         # 页码超界自动归位
         records, stats = recorder.query("7d", page=99, page_size=10)
-        assert stats['current_page'] == 3, f"超界页码应归位到最后一页: {stats['current_page']}"
-        print(f"  ✅ 页码超界自动归位到第3页")
+        assert stats['current_page'] == 2, f"超界页码应归位到最后一页: {stats['current_page']}"
+        print(f"  ✅ 页码超界自动归位到第2页")
         
     finally:
         shutil.rmtree(temp_dir)
