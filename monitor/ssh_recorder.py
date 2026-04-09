@@ -35,7 +35,7 @@ class SSHRecorder:
         r'(?P<month1>\w+)\s+(?P<day1>\d+)\s+(?P<time1>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+'
         # 格式2: ISO 8601
         r'|'
-        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{4}\s+\S+\s+sshd\[\d+\]:\s+'
+        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{2}:?\d{2}\s+\S+\s+sshd\[\d+\]:\s+'
         r')'
         r'Accepted password for (?P<user>\S+) from (?P<ip>\S+)'
     )
@@ -46,7 +46,7 @@ class SSHRecorder:
         r'(?P<month1>\w+)\s+(?P<day1>\d+)\s+(?P<time1>\d+:\d+:\d+)\s+\S+\s+sshd\[\d+\]:\s+'
         # 格式2: ISO 8601
         r'|'
-        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{4}\s+\S+\s+sshd\[\d+\]:\s+'
+        r'\d{4}-\d{2}-\d{2}T(?P<time2>\d+:\d+:\d+)[.\d]*[+-]\d{2}:?\d{2}\s+\S+\s+sshd\[\d+\]:\s+'
         r')'
         r'Failed password for (?P<user>\S+) from (?P<ip>\S+)'
     )
